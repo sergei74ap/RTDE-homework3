@@ -40,7 +40,7 @@ dm_traffic = DataProcHiveOperator(
     query="""
         INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year='{{ execution_date.year }}') 
         SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() 
-        FROM sperfilyev.ods_traffic WHERE year(`timestamp`)={{ execution_date.year }};    
+        FROM sperfilyev.ods_traffic WHERE year(`timestamp`)={{ execution_date.year }} GROUP BY user_id;    
     """,
     cluster_name='cluster-dataproc',
     job_name=USERNAME + '_dm_traffic_{{ execution_date.year }}_{{ params.job_suffix }}',
