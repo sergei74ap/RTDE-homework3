@@ -17,7 +17,7 @@ dag = DAG(
     USERNAME + '_data_lake_etl2',
     default_args=default_args,
     description='Data Lake ETL_2 by sperfilyev',
-    schedule_interval="0 0 1 1 *",
+    schedule_interval='@yearly',
 )
 
 ods_billing = DataProcHiveOperator(
