@@ -52,16 +52,14 @@ for ods_table in metadata_ods.keys():
     ods_tasks[ods_table] = DataProcHiveOperator(
         query=generate_ods_fill(
             ods_table, 
-            metadata_ods.get(ods_table)['field_of_partition']),
-            metadata_ods.get(ods_table)['fields_to_import']),
-        ),
+            metadata_ods[ods_table]['field_of_partition']),
+            metadata_ods[ods_table]['fields_to_import'])),
         cluster_name='cluster-dataproc',
         job_name=generate_ods_job(ods_table),
         params={"job_suffix": randint(0, 100000)},
         region='europe-west3',
         task_id='ods_' + ods_table,
-        dag=dag,
-    )
+        dag=dag)
 
 
 dm_traffic = DataProcHiveOperator(
@@ -75,7 +73,6 @@ dm_traffic = DataProcHiveOperator(
     params={"job_suffix": randint(0, 100000)},
     region='europe-west3',
     task_id='dm_traffic',
-    dag=dag,
-)
+    dag=dag)
 
 ods_tasks['traffic'] >> dm_traffic
