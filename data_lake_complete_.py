@@ -14,6 +14,15 @@ def generate_ods_fill(tbl_name, fld_partition, flds_to_import='*'):
         " WHERE year(" + fld_partition + ")={{ execution_date.year }};"
 
 
+def generate_dm_fill(tbl_name, fld_aggr, fld_group='user_id'): 
+    return "INSERT OVERWRITE TABLE " + USERNAME + ".dm_" + tbl_name + \
+        " PARTITION (year='{{ execution_date.year }}')" + \ 
+        " SELECT " + fld_group + ", min(" + fld_aggr + "), max(" + fld_aggr + "), avg(" + \
+        fld_aggr + "), current_timestamp, current_user()" + \
+        " FROM " + USERNAME + ".ods_" + tbl_name + \
+        " WHERE year(`timestamp`)={{ execution_date.year }} GROUP BY " + fld_group + ";"
+
+
 def generate_ods_job(tbl_name):
     return USERNAME + '_ods_' + tbl_name + '_{{ execution_date.year }}_{{ params.job_suffix }}'
 
@@ -31,6 +40,10 @@ metadata_ods = {
         'fields_to_import': 'user_id, from_unixtime(floor(`timestamp`/1000)), '
                             'device_id, device_ip_addr, bytes_sent, bytes_received'
     },
+}
+
+metadata_dm = {
+    'traffic': {'field_aggregate': 'bytes_received', 'field_group_by': 'user_id'},
 }
 
 default_args = {
@@ -63,18 +76,20 @@ for ods_table in metadata_ods.keys():
         dag=dag,
     )
 
-dm_traffic = DataProcHiveOperator(
-    query="""
-        INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year='{{ execution_date.year }}') 
-        SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() 
-        FROM sperfilyev.ods_traffic WHERE year(`timestamp`)={{ execution_date.year }} GROUP BY user_id;    
-    """,
-    cluster_name='cluster-dataproc',
-    job_name=generate_dm_job('traffic'),
-    params={"job_suffix": randint(0, 100000)},
-    region='europe-west3',
-    task_id='dm_traffic',
-    dag=dag
-)
+dm_tasks = {}
+for dm_table in metadata_dm.keys():
+    dm_tasks[dm_table] = DataProcHiveOperator(
+        query=generate_dm_fill(
+            dm_table,
+            metadata_dm[dm_table]['field_aggregate'],
+            metadata_dm[dm_table]['field_group_by'],
+        ),
+        cluster_name='cluster-dataproc',
+        job_name=generate_dm_job(dm_table),
+        params={"job_suffix": randint(0, 100000)},
+        region='europe-west3',
+        task_id='dm_' + dm_table,
+        dag=dag
+    )
 
-ods_tasks['traffic'] >> dm_traffic
+ods_tasks['traffic'] >> dm_tasks['traffic']
