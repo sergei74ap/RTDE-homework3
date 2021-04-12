@@ -188,15 +188,15 @@ select year, count(*) from ods_traffic group by year;
 
 CREATE EXTERNAL TABLE sperfilyev.dm_traffic(user_id int, bts_received_min int, bts_received_max int, bts_received_avg int, updated_at timestamp, updated_by string) PARTITIONED BY (year string) STORED AS PARQUET LOCATION 'gs://rt-2021-03-25-16-47-29-sfunu-sperfilyev/data_lake/dm/traffic';
 
-INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2021) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year(`timestamp`)=2021 GROUP BY user_id;
-INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2020) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year(`timestamp`)=2020 GROUP BY user_id;
-INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2019) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year(`timestamp`)=2019 GROUP BY user_id;
-INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2018) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year(`timestamp`)=2018 GROUP BY user_id;
-INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2017) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year(`timestamp`)=2017 GROUP BY user_id;
-INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2016) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year(`timestamp`)=2016 GROUP BY user_id;
-INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2015) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year(`timestamp`)=2015 GROUP BY user_id;
-INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2014) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year(`timestamp`)=2014 GROUP BY user_id;
-INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2013) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year(`timestamp`)=2013 GROUP BY user_id;
+INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2021) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year=2021 GROUP BY user_id;
+INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2020) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year=2020 GROUP BY user_id;
+INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2019) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year=2019 GROUP BY user_id;
+INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2018) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year=2018 GROUP BY user_id;
+INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2017) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year=2017 GROUP BY user_id;
+INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2016) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year=2016 GROUP BY user_id;
+INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2015) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year=2015 GROUP BY user_id;
+INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2014) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year=2014 GROUP BY user_id;
+INSERT OVERWRITE TABLE sperfilyev.dm_traffic PARTITION (year=2013) SELECT user_id, min(bytes_received), max(bytes_received), avg(bytes_received), current_timestamp, current_user() FROM sperfilyev.ods_traffic WHERE year=2013 GROUP BY user_id;
 
 
 -- ПРОВЕРКИ:

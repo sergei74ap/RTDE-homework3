@@ -17,5 +17,5 @@ select user_id, bts_received_max, year from dm_traffic where year=2017 order by 
 -- выбрать платежи этого пользователя
 select * from ods_payment where year=2017 and user_id = (select user_id from dm_traffic where year=2017 order by bts_received_max limit 1) order by `sum` desc;
 
--- выбрать максимальные уровни среднегодовой заказчки и вывести по годам 
+-- выбрать максимальные уровни среднегодовой закачки и вывести по годам 
 select year, max(bts_received_avg) from dm_traffic group by year;
