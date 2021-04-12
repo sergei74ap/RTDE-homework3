@@ -6,6 +6,22 @@ from airflow.contrib.operators.dataproc_operator import DataProcHiveOperator
 
 USERNAME = 'sperfilyev'
 
+
+def generate_ods_fill(tbl_name, fld_partition, flds_to_import='*'): 
+    return "INSERT OVERWRITE TABLE " + USERNAME + ".ods_" + tbl_name + \
+        " PARTITION (year='{{ execution_date.year }}')" + \
+        " SELECT " + flds_to_import + " FROM " + USERNAME + ".stg_" + tbl_name + \
+        " WHERE year(" + fld_partition + ")={{ execution_date.year }};"
+
+
+def generate_ods_job(tbl_name):
+    return USERNAME + '_ods_' + tbl_name + '_{{ execution_date.year }}_{{ params.job_suffix }}'
+
+
+def generate_dm_job(tbl_name):
+    return USERNAME + '_dm_' + tbl_name + '_{{ execution_date.year }}_{{ params.job_suffix }}'
+
+
 default_args = {
     'owner': USERNAME,
     'start_date': datetime(2013, 1, 1, 0, 0, 0),
@@ -20,32 +36,12 @@ dag = DAG(
     schedule_interval="@yearly",
 )
 
-
-def default_ods_fill(tbl_name, fld_partition, flds_to_import='*'): 
-    return "INSERT OVERWRITE TABLE " + USERNAME + ".ods_" + tbl_name + \
-        " PARTITION (year='{{ execution_date.year }}')" + \
-        " SELECT " + flds_to_import + " FROM " + USERNAME + ".stg_" + tbl_name + \
-        " WHERE year(" + fld_partition + ")={{ execution_date.year }};"
-
-
-data_sources = (d)
-
-ods_billing = DataProcHiveOperator(
-    task_id='ods_billing',
-    dag=dag,
-    query=default_ods_fill("billing", "created_at"),
-    cluster_name='cluster-dataproc',
-    job_name=USERNAME + '_ods_billing_{{ execution_date.year }}_{{ params.job_suffix }}',
-    params={"job_suffix": randint(0, 100000)},
-    region='europe-west3',
-)
-
 ods_issue = DataProcHiveOperator(
     task_id='ods_issue',
     dag=dag,
-    query=default_ods_fill("issue", "start_time"),
+    query=generate_ods_fill('issue', 'start_time'),
     cluster_name='cluster-dataproc',
-    job_name=USERNAME + '_ods_issue_{{ execution_date.year }}_{{ params.job_suffix }}',
+    job_name=generate_ods_job('issue'),
     params={"job_suffix": randint(0, 100000)},
     region='europe-west3',
 )
@@ -53,9 +49,9 @@ ods_issue = DataProcHiveOperator(
 ods_payment = DataProcHiveOperator(
     task_id='ods_payment',
     dag=dag,
-    query=default_ods_fill("payment", "pay_date"),
+    query=generate_ods_fill('payment', 'pay_date'),
     cluster_name='cluster-dataproc',
-    job_name=USERNAME + '_ods_payment_{{ execution_date.year }}_{{ params.job_suffix }}',
+    job_name=generate_ods_job('payment'),
     params={"job_suffix": randint(0, 100000)},
     region='europe-west3',
 )
@@ -63,13 +59,13 @@ ods_payment = DataProcHiveOperator(
 ods_traffic = DataProcHiveOperator(
     task_id='ods_traffic',
     dag=dag,
-    query=default_ods_fill(
-        "traffic", 
-        "from_unixtime(floor(`timestamp`/1000))", 
-        "user_id, from_unixtime(floor(`timestamp`/1000)), device_id, device_ip_addr, bytes_sent, bytes_received"
+    query=generate_ods_fill(
+        'traffic', 
+        'from_unixtime(floor(`timestamp`/1000))', 
+        'user_id, from_unixtime(floor(`timestamp`/1000)), device_id, device_ip_addr, bytes_sent, bytes_received'
     ),
     cluster_name='cluster-dataproc',
-    job_name=USERNAME + '_ods_traffic_{{ execution_date.year }}_{{ params.job_suffix }}',
+    job_name=generate_ods_job('traffic'),
     params={"job_suffix": randint(0, 100000)},
     region='europe-west3',
 )
@@ -83,7 +79,7 @@ dm_traffic = DataProcHiveOperator(
         FROM sperfilyev.ods_traffic WHERE year(`timestamp`)={{ execution_date.year }} GROUP BY user_id;    
     """,
     cluster_name='cluster-dataproc',
-    job_name=USERNAME + '_dm_traffic_{{ execution_date.year }}_{{ params.job_suffix }}',
+    job_name=generate_dm_job('traffic'),
     params={"job_suffix": randint(0, 100000)},
     region='europe-west3',
 )
