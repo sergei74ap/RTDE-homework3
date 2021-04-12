@@ -20,7 +20,7 @@ def generate_dm_fill(tbl_name, fld_aggr, fld_group='user_id'):
         " SELECT " + fld_group + ", min(" + fld_aggr + "), max(" + fld_aggr + "), avg(" + \
         fld_aggr + "), current_timestamp, current_user()" + \
         " FROM " + USERNAME + ".ods_" + tbl_name + \
-        " WHERE year(`timestamp`)={{ execution_date.year }} GROUP BY " + fld_group + ";"
+        " WHERE year={{ execution_date.year }} GROUP BY " + fld_group + ";"
 
 
 def generate_ods_job(tbl_name):
