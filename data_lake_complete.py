@@ -22,11 +22,13 @@ dag = DAG(
 
 
 def default_ods_fill(tbl_name, fld_partition, flds_to_import='*'): 
-    return "INSERT OVERWRITE TABLE sperfilyev.ods_" + tbl_name + \
+    return "INSERT OVERWRITE TABLE " + USERNAME + ".ods_" + tbl_name + \
         " PARTITION (year='{{ execution_date.year }}')" + \
-        " SELECT " + flds_to_import + " FROM sperfilyev.stg_" + tbl_name + \
+        " SELECT " + flds_to_import + " FROM " + USERNAME + ".stg_" + tbl_name + \
         " WHERE year(" + fld_partition + ")={{ execution_date.year }};"
 
+
+data_sources = (d)
 
 ods_billing = DataProcHiveOperator(
     task_id='ods_billing',
