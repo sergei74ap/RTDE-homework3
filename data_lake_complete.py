@@ -36,6 +36,16 @@ dag = DAG(
     schedule_interval="@yearly",
 )
 
+ods_billing = DataProcHiveOperator(
+    task_id='ods_billing',
+    dag=dag,
+    query=generate_ods_fill('billng', 'created_at'),
+    cluster_name='cluster-dataproc',
+    job_name=generate_ods_job('billing'),
+    params={"job_suffix": randint(0, 100000)},
+    region='europe-west3',
+)
+
 ods_issue = DataProcHiveOperator(
     task_id='ods_issue',
     dag=dag,
