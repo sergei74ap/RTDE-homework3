@@ -16,7 +16,7 @@ def generate_ods_fill(tbl_name, fld_partition, flds_to_import='*'):
 
 def generate_dm_fill(tbl_name, fld_aggr, fld_group='user_id'): 
     return "INSERT OVERWRITE TABLE " + USERNAME + ".dm_" + tbl_name + \
-        " PARTITION (year='{{ execution_date.year }}')" + \ 
+        " PARTITION (year='{{ execution_date.year }}')" + \
         " SELECT " + fld_group + ", min(" + fld_aggr + "), max(" + fld_aggr + "), avg(" + \
         fld_aggr + "), current_timestamp, current_user()" + \
         " FROM " + USERNAME + ".ods_" + tbl_name + \
