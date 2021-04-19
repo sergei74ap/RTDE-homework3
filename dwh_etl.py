@@ -24,6 +24,6 @@ ods_load_batch = PostgresOperator(
     dag=dag,
     sql="insert into " + USERNAME + ".ods_t_payment "\
         "(select * from " + USERNAME + ".stg_t_payment "\
-        "(where extract(year from pay_date) = {{ execution_date.year }} "\
+        "where extract(year from pay_date) = {{ execution_date.year }} "\
         "and extract(month from pay_date) = {{ execution_date.month }});"
 )
