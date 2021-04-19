@@ -15,8 +15,8 @@ default_args = {
 dag = DAG(
     USERNAME + '_dwh_etl',
     default_args=default_args,
-    description='DWH ETL tasks',
-    schedule_interval="@monthly",
+    description='DWH ETL tasks by sperfilyev',
+    schedule_interval="@quarterly",
 )
 
 ods_load_batch = PostgresOperator(
