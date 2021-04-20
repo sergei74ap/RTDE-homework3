@@ -13,29 +13,32 @@ default_args = {
 }
 
 dag = DAG(
-    USERNAME + '_dwh_etl',
+    dag_id=USERNAME + '_dwh_etl',
     default_args=default_args,
     description='DWH ETL tasks by sperfilyev',
     schedule_interval="@yearly",
+    max_active_runs=1,
+    params={'schemaName': USERNAME},
 )
 
 hub_user_drop_view = PostgresOperator(
     task_id="hub_user_drop_view",
     dag=dag,
-    sql="drop view if exists " + USERNAME + ".dds_v_hub_user_etl;"
+    sql="drop view if exists {{ params.schemaName }}.dds_v_hub_user_etl;"
 )
 
 hub_user_create_view = PostgresOperator(
     task_id="hub_user_create_view",
     dag=dag,
-    sql="create view " + USERNAME + """.dds_v_hub_user_etl as (
+    sql="""
+create view {{ params.schemaName }}.dds_v_hub_user_etl as (
 with users_numbered as (
     select user_pk,
            user_key,
            load_dts,
            rec_source,
            row_number() over (partition by user_pk order by load_dts asc) as row_num
-    from """ + USERNAME + """.ods_v_payment where extract(year from pay_date) = {{ execution_date.year }}),
+    from {{ params.schemaName }}.ods_v_payment where extract(year from pay_date) = {{ execution_date.year }}),
      users_rank_1 as (
          select user_pk, user_key, load_dts, rec_source
          from users_numbered
@@ -43,7 +46,7 @@ with users_numbered as (
      records_to_insert as (
          select a.*
          from users_rank_1 as a
-                  left join """ + USERNAME + """.dds_t_hub_user as h
+                  left join {{ params.schemaName }}.dds_t_hub_user as h
                             on a.user_pk = h.user_pk
          where h.user_pk is null
      )
@@ -56,7 +59,7 @@ from records_to_insert
 hub_user_insert = PostgresOperator(
     task_id="hub_user_insert",
     dag=dag,
-    sql="insert into " + USERNAME + ".dds_t_hub_user (select * from " + USERNAME + ".dds_v_hub_user_etl);"
+    sql="insert into {{ params.schemaName }}.dds_t_hub_user (select * from {{ params.schemaName }}.dds_v_hub_user_etl);"
 )
 
 hub_user_drop_view >> hub_user_create_view >> hub_user_insert
