@@ -21,29 +21,11 @@ dag = DAG(
     params={'schemaName': USERNAME},
 )
 
-hub_user_drop_view = PostgresOperator(
-    task_id="hub_user_drop_view",
-    dag=dag,
-    sql="drop view if exists {{ params.schemaName }}.dds_v_hub_user_etl;"
-)
-
 hub_user_create_view = PostgresOperator(
     task_id="hub_user_create_view",
     dag=dag,
     sql="""
-"""
-)
-
-hub_user_insert = PostgresOperator(
-    task_id="hub_user_insert",
-    dag=dag,
-    sql="insert into {{ params.schemaName }}.dds_t_hub_user (select * from {{ params.schemaName }}.dds_v_hub_user_etl);"
-)
-
-hub_user_drop_view >> hub_user_create_view >> hub_user_insert
-
-
-"""
+drop view if exists {{ params.schemaName }}.dds_v_hub_user_etl;
 create view {{ params.schemaName }}.dds_v_hub_user_etl as (
 with users_numbered as (
     select user_pk,
@@ -66,4 +48,14 @@ with users_numbered as (
 select *
 from records_to_insert
     );
+
 """
+)
+
+hub_user_insert = PostgresOperator(
+    task_id="hub_user_insert",
+    dag=dag,
+    sql="insert into {{ params.schemaName }}.dds_t_hub_user (select * from {{ params.schemaName }}.dds_v_hub_user_etl);"
+)
+
+hub_user_create_view >> hub_user_insert
