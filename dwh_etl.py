@@ -31,6 +31,19 @@ hub_user_create_view = PostgresOperator(
     task_id="hub_user_create_view",
     dag=dag,
     sql="""
+"""
+)
+
+hub_user_insert = PostgresOperator(
+    task_id="hub_user_insert",
+    dag=dag,
+    sql="insert into {{ params.schemaName }}.dds_t_hub_user (select * from {{ params.schemaName }}.dds_v_hub_user_etl);"
+)
+
+hub_user_drop_view >> hub_user_create_view >> hub_user_insert
+
+
+"""
 create view {{ params.schemaName }}.dds_v_hub_user_etl as (
 with users_numbered as (
     select user_pk,
@@ -54,12 +67,3 @@ select *
 from records_to_insert
     );
 """
-)
-
-hub_user_insert = PostgresOperator(
-    task_id="hub_user_insert",
-    dag=dag,
-    sql="insert into {{ params.schemaName }}.dds_t_hub_user (select * from {{ params.schemaName }}.dds_v_hub_user_etl);"
-)
-
-hub_user_drop_view >> hub_user_create_view >> hub_user_insert
