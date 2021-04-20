@@ -15,6 +15,7 @@ default_args = {
 dag = DAG(
     dag_id=USERNAME + '_dwh_etl',
     default_args=default_args,
+    default_view='graph',
     description='DWH ETL tasks by ' + USERNAME,
     schedule_interval="@yearly",
     max_active_runs=1,
@@ -31,7 +32,7 @@ create view {{ params.schemaName }}.dds_v_hub_user_etl as (
 with users_numbered as (
     select user_pk,
            user_key,
-           {{ execution_date }}::date as load_dts,
+           '{{ execution_date }}'::date as load_dts,
            rec_source,
            row_number() over (partition by user_pk order by load_dts asc) as row_num
     from {{ params.schemaName }}.ods_v_payment where extract(year from pay_date) = {{ execution_date.year }}),
@@ -64,7 +65,7 @@ create view {{ params.schemaName }}.dds_v_hub_account_etl as (
 with accounts_numbered as (
     select account_pk,
            account_key,
-           {{ execution_date }}::date as load_dts,
+           '{{ execution_date }}'::date as load_dts,
            rec_source,
            row_number() over (partition by account_pk order by load_dts asc) as row_num
     from {{ params.schemaName }}.ods_v_payment where extract(year from pay_date) = {{ execution_date.year }}),
@@ -97,7 +98,7 @@ create view {{ params.schemaName }}.dds_v_hub_billing_period_etl as (
 with billing_periods_numbered as (
     select billing_period_pk,
            billing_period_key,
-           {{ execution_date }}::date as load_dts,
+           '{{ execution_date }}'::date as load_dts,
            rec_source,
            row_number() over (partition by billing_period_pk order by load_dts asc) as row_num
     from {{ params.schemaName }}.ods_v_payment where extract(year from pay_date) = {{ execution_date.year }}),
