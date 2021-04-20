@@ -22,8 +22,8 @@ dag = DAG(
     params={'schemaName': USERNAME},
 )
 
-hub_user_insert = PostgresOperator(
-    task_id="hub_user_insert",
+dds_hub_user = PostgresOperator(
+    task_id="dds_hub_user",
     dag=dag,
     sql="""
 drop view if exists {{ params.schemaName }}.dds_v_hub_user_etl;
@@ -51,12 +51,13 @@ select *
 from records_to_insert
     );
 
+grant all privileges on {{ params.schemaName }}.dds_v_hub_user_etl to {{ params.schemaName }};
 insert into {{ params.schemaName }}.dds_t_hub_user (select * from {{ params.schemaName }}.dds_v_hub_user_etl);
 """
 )
 
-hub_account_insert = PostgresOperator(
-    task_id="hub_account_insert",
+dds_hub_account = PostgresOperator(
+    task_id="dds_hub_account",
     dag=dag,
     sql="""
 drop view if exists {{ params.schemaName }}.dds_v_hub_account_etl;
@@ -84,12 +85,13 @@ select *
 from records_to_insert
     );
 
+grant all privileges on {{ params.schemaName }}.dds_v_hub_account_etl to {{ params.schemaName }};
 insert into {{ params.schemaName }}.dds_t_hub_account (select * from {{ params.schemaName }}.dds_v_hub_account_etl);
 """
 )
 
-hub_billing_period_insert = PostgresOperator(
-    task_id="hub_billing_period_insert",
+dds_hub_billing_period = PostgresOperator(
+    task_id="dds_hub_billing_period",
     dag=dag,
     sql="""
 drop view if exists {{ params.schemaName }}.dds_v_hub_billing_period_etl;
@@ -117,12 +119,50 @@ select *
 from records_to_insert
     );
 
+grant all privileges on {{ params.schemaName }}.dds_v_hub_billing_period_etl to {{ params.schemaName }};
 insert into {{ params.schemaName }}.dds_t_hub_billing_period (select * from {{ params.schemaName }}.dds_v_hub_billing_period_etl);
 """
 )
 
-all_hubs_loaded = DummyOperator(task_id="all_hubs_loaded", dag=dag)
+dds_lnk_payment = PostgresOperator(
+    task_id="dds_lnk_payment",
+    dag=dag,
+    sql="""
+drop view if exists {{ params.schemaName }}.dds_v_lnk_payment_etl;
 
-hub_user_insert >> all_hubs_loaded
-hub_account_insert >> all_hubs_loaded
-hub_billing_period_insert >> all_hubs_loaded
+create view {{ params.schemaName }}.dds_v_lnk_payment_etl as (
+select distinct p.pay_pk,
+                p.user_pk,
+                p.account_pk,
+                p.billing_period_pk,
+                p.effective_from,
+                '{{ execution_date }}'::date as load_dts,
+                p.rec_source
+from {{ params.schemaName }}.ods_v_payment as p
+         left join {{ params.schemaName }}.dds_t_lnk_payment as l
+                   on p.pay_pk = l.pay_pk
+where l.pay_pk is null and extract(year from p.pay_date) = {{ execution_date.year }}
+);
+    
+grant all privileges on {{ params.schemaName }}.dds_v_lnk_payment_etl to {{ params.schemaName }};
+insert into {{ params.schemaName }}.dds_t_lnk_payment (select * from {{ params.schemaName }}.dds_v_lnk_payment_etl);
+"""
+)
+
+dds_sat_user = DummyOperator(task_id="dds_sat_user", dag=dag)
+dds_sat_payment = DummyOperator(task_id="dds_sat_payment", dag=dag)
+
+all_hubs_loaded = DummyOperator(task_id="all_hubs_loaded", dag=dag)
+all_links_loaded = DummyOperator(task_id="all_links_loaded", dag=dag)
+all_sats_loaded = DummyOperator(task_id="all_sats_loaded", dag=dag)
+
+dds_hub_user >> all_hubs_loaded
+dds_hub_account >> all_hubs_loaded
+dds_hub_billing_period >> all_hubs_loaded
+
+all_hubs_loaded >> dds_lnk_payment
+dds_lnk_payment >> all_links_loaded
+
+all_links_loaded >> [dds_sat_user, dds_sat_payment]
+dds_sat_user >> all_sats_loaded
+dds_sat_payment >> all_sats_loaded
