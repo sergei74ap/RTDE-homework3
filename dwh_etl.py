@@ -75,10 +75,21 @@ insert into {{ params.schemaName }}.dds_t_lnk_payment
 """
 )
 
-# TODO: LOAD SATELLITES
-dds_sat_user = DummyOperator(task_id="dds_sat_user", dag=dag)
-dds_sat_payment = DummyOperator(task_id="dds_sat_payment", dag=dag)
+dds_sat_user = PostgresOperator(
+    task_id="dds_sat_user",
+    dag=dag,
+    sql="""
+insert into {{ params.schemaName }}.dds_t_sat_user 
+(select * from {{ params.schemaName }}.dds_v_sat_user_etl);
+"""
 
+dds_sat_payment = PostgresOperator(
+    task_id="dds_sat_payment",
+    dag=dag,
+    sql="""
+insert into {{ params.schemaName }}.dds_t_sat_payment 
+(select * from {{ params.schemaName }}.dds_v_sat_payment_etl);
+"""
 
 ## ОПРЕДЕЛИМ СТРУКТУРУ DAG'А
 
