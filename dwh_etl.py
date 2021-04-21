@@ -35,7 +35,7 @@ insert into {{ params.schemaName}}.ods_t_payment
             '{{ execution_date }}'::date as load_dts,
             'PAYMENT_DATALAKE'::text as rec_source
      from {{ params.schemaName }}.stg_t_payment as stg
-     where extract(year from stg.pay_date) = {{ execution_date.year }})-1;
+     where extract(year from stg.pay_date) = {{ execution_date.year }}-1);
 """    
 )
 
