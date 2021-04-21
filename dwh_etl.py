@@ -9,7 +9,7 @@ USERNAME = 'sperfilyev'
 
 default_args = {
     'owner': USERNAME,
-    'start_date': datetime(2013, 1, 1, 0, 0, 0)
+    'start_date': datetime(2014, 1, 1, 0, 0, 0)     # данные начинаются с 2013 года
 }
 
 dag = DAG(
@@ -35,7 +35,7 @@ insert into {{ params.schemaName}}.ods_t_payment
             '{{ execution_date }}'::date as load_dts,
             'PAYMENT_DATALAKE'::text as rec_source
      from {{ params.schemaName }}.stg_t_payment as stg
-     where extract(year from stg.pay_date) = {{ execution_date.year }});
+     where extract(year from stg.pay_date) = {{ execution_date.year }})-1;
 """    
 )
 
