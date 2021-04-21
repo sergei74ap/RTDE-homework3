@@ -82,6 +82,7 @@ dds_sat_user = PostgresOperator(
 insert into {{ params.schemaName }}.dds_t_sat_user 
 (select * from {{ params.schemaName }}.dds_v_sat_user_etl);
 """
+)
 
 dds_sat_payment = PostgresOperator(
     task_id="dds_sat_payment",
@@ -90,6 +91,7 @@ dds_sat_payment = PostgresOperator(
 insert into {{ params.schemaName }}.dds_t_sat_payment 
 (select * from {{ params.schemaName }}.dds_v_sat_payment_etl);
 """
+)
 
 ## ОПРЕДЕЛИМ СТРУКТУРУ DAG'А
 
