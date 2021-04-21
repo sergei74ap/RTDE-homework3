@@ -22,6 +22,12 @@ dag = DAG(
     params={'schemaName': USERNAME},
 )
 
+
+## ОПИШЕМ ВСЕ ОПЕРАЦИИ ЗАГРУЗКИ ДАННЫХ
+
+# TODO: LOAD ODS FROM STG, PARTITION BY YEAR (EMULATING SEQUENTIAL IMPORTS INTO DWH)
+ods_load = DummyOperator(task_id="ods_load", dag=dag)
+
 dds_hub_user = PostgresOperator(
     task_id="dds_hub_user",
     dag=dag,
@@ -149,12 +155,18 @@ insert into {{ params.schemaName }}.dds_t_lnk_payment (select * from {{ params.s
 """
 )
 
+# TODO: LOAD SATELLITES
 dds_sat_user = DummyOperator(task_id="dds_sat_user", dag=dag)
 dds_sat_payment = DummyOperator(task_id="dds_sat_payment", dag=dag)
+
+
+## ОПРЕДЕЛИМ СТРУКТУРУ DAG'А
 
 all_hubs_loaded = DummyOperator(task_id="all_hubs_loaded", dag=dag)
 all_links_loaded = DummyOperator(task_id="all_links_loaded", dag=dag)
 all_sats_loaded = DummyOperator(task_id="all_sats_loaded", dag=dag)
+
+ods_load >> [dds_hub_user, dds_hub_account, dds_hub_billing_period]
 
 dds_hub_user >> all_hubs_loaded
 dds_hub_account >> all_hubs_loaded
