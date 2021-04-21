@@ -32,8 +32,11 @@ ods_load = PostgresOperator(
     sql="""
 truncate {{ params.schemaName }}.ods_t_payment cascade;
 insert into {{ params.schemaName}}.ods_t_payment
-    (select * from {{ params.schemaName }}.stg_t_payment as stg
-        where extract(year from stg.pay_date) = {{ execution_date.year }});
+    (select stg.*,
+            '{{ execution_date }}'::date as load_dts,
+            'PAYMENT_DATALAKE'::text as rec_source
+     from {{ params.schemaName }}.stg_t_payment as stg
+     where extract(year from stg.pay_date) = {{ execution_date.year }});
 
 drop view if exists {{ params.schemaName }}.ods_v_payment_etl cascade;
 create view {{ params.schemaName }}.ods_v_payment_etl as
@@ -43,7 +46,6 @@ with derived_columns as (
            user_id::text            as user_key,
            account::text            as account_key,
            billing_period::text     as billing_period_key,
-           'PAYMENT_DATALAKE'::text as rec_source
     from {{ params.schemaName }}.ods_t_payment
 ),
      hashed_columns as (
@@ -80,7 +82,7 @@ select user_key,
        pay_date,
        phone,
        rec_source,
-       '{{ execution_date }}'::date as load_dts,
+       load_dts,
        pay_date as effective_from
 from hashed_columns
     );
