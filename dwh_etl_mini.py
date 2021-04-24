@@ -31,12 +31,20 @@ ods_reload = PostgresOperator(
 delete from {{ params.schemaName }}.ods_t_payment cascade
 where extract(year from pay_date) = {{ execution_date.year }};
 
+delete from {{ params.schemaName }}.ods_t_payment_hashed cascade
+where extract(year from effective_from) = {{ execution_date.year }};
+
 insert into {{ params.schemaName}}.ods_t_payment
-    (select stg.*,
-            '{{ execution_date }}'::date as load_dts,
-            'PAYMENT_DATALAKE'::text as rec_source
-     from {{ params.schemaName }}.stg_t_payment as stg
-     where extract(year from stg.pay_date) = {{ execution_date.year }});
+    (select * 
+     from {{ params.schemaName }}.stg_t_payment 
+     where extract(year from pay_date) = {{ execution_date.year }});
+
+insert into {{ params.schemaName}}.ods_t_payment_hashed
+    (select v.*,
+            '{{ execution_date }}'::date as load_dts
+     from {{ params.schemaName }}.ods_v_payment_etl as v
+     where extract(year from v.effective_from) = {{ execution_date.year }});
+
 """
 )
 
