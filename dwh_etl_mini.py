@@ -73,7 +73,7 @@ with source_data as (
            load_dts,
            rec_source
     from {{ params.schemaName }}.ods_t_payment_hashed
-    where extract(year from load_dts) = {{{ execution_date.year }}
+    where extract(year from load_dts) = {{ execution_date.year }}
 ),
      update_records as (
          select s.*
