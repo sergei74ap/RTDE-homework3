@@ -61,8 +61,45 @@ dds_sat_user = PostgresOperator(
     task_id="dds_sat_user",
     dag=dag,
     sql="""
-insert into {{ params.schemaName }}.dds_t_sat_user 
-(select * from {{ params.schemaName }}.dds_v_sat_user_etl);
+delete from {{ params.schemaName }}.dds_t_sat_user 
+where extract(year from load_dts) = {{ execution_date.year }};
+
+insert into {{ params.schemaName }}.dds_t_sat_user
+with source_data as (
+    select user_pk,
+           user_hashdiff,
+           phone,
+           effective_from,
+           load_dts,
+           rec_source
+    from {{ params.schemaName }}.ods_t_payment_hashed
+    where extract(year from load_dts) = {{{ execution_date.year }}
+),
+     update_records as (
+         select s.*
+         from {{ params.schemaName }}.dds_t_sat_user as s
+                  join source_data as src
+                       on s.user_pk = src.user_pk and s.load_dts <= (select max(load_dts) from source_data)
+     ),
+     latest_records as (
+         select *
+         from (
+                  select user_pk,
+                         user_hashdiff,
+                         load_dts,
+                         rank() over (partition by user_pk order by load_dts desc) as row_rank
+                  from update_records
+              ) as ranked_recs
+         where row_rank = 1),
+     records_to_insert as (
+         select distinct a.*
+         from source_data as a
+                  left join latest_records
+                            on latest_records.user_hashdiff = a.user_hashdiff and
+                               latest_records.user_pk = a.user_pk
+         where latest_records.user_hashdiff is null
+     )
+select * from records_to_insert;
 """
 )
 
