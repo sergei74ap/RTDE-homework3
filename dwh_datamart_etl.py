@@ -73,10 +73,19 @@ dimensions_fill = [
     ) for dim_name in DM_DIMENSIONS
 ]
 
+all_joins = '\n'.join([
+    ' JOIN {{ params.schemaName }}.payment_report_dim_' + dim_name + ' dim' + str(dim_num) +\
+    ' ON tmp.' + dim_name + '=dim' + str(dim_num) + '.' + dim_name + '_key' for dim_num, dim_name in enumerate(DM_DIMENSIONS)
+    ])
+all_ids = ','.join(['dim' + str(dim_num) for dim_num, dim_name in enumerate(DM_DIMENSIONS)])   
 facts_fill = PostgresOperator(
     task_id="facts_fill",
     dag=dag,
-    sql="""
+    sql='INSERT INTO {{ params.schemaName }}.payment_report_fct SELECT ' + all_ids + ', tmp.is_vip, tmp.sum' +\
+        ' FROM {{ params.schemaName }}.payment_report_tmp_oneyear tmp' + all_joins
+)
+
+"""
 INSERT INTO {{ params.schemaName }}.payment_report_fct
 SELECT biy.id, lt.id, d.id, ry.id, tmp.is_vip, tmp.sum
 FROM {{ params.schemaName }}.payment_report_tmp_oneyear tmp
@@ -85,7 +94,7 @@ JOIN {{ params.schemaName }}.payment_report_dim_legal_type lt ON tmp.legal_type=
 JOIN {{ params.schemaName }}.payment_report_dim_district d ON tmp.district=d.district_key
 JOIN {{ params.schemaName }}.payment_report_dim_registration_year ry ON tmp.registration_year=ry.registration_year_key;
 """
-)
+
 
 tmp_tbl_drop = PostgresOperator(
     task_id="tmp_tbl_drop",
