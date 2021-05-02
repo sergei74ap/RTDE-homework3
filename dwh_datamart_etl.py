@@ -7,7 +7,7 @@ from airflow.operators.dummy_operator import DummyOperator
 
 USERNAME = 'sperfilyev'
 DM_DIMENSIONS = ('billing_year', 'legal_type', 'district', 'registration_year')
-DM_DIMS_TEXT = ','.join(DM_DIMENSIONS)
+DM_DIMS_TEXT = ', '.join(DM_DIMENSIONS)
 
 default_args = {
     'owner': USERNAME,
@@ -77,12 +77,12 @@ all_joins = '\n'.join([
     ' JOIN {{ params.schemaName }}.payment_report_dim_' + dim_name + ' dim' + str(dim_num) +\
     ' ON tmp.' + dim_name + '=dim' + str(dim_num) + '.' + dim_name + '_key' for dim_num, dim_name in enumerate(DM_DIMENSIONS)
     ])
-all_ids = ','.join(['dim' + str(dim_num) for dim_num, dim_name in enumerate(DM_DIMENSIONS)])   
+all_ids = ', '.join(['dim' + str(dim_num) + '.id' for dim_num, dim_name in enumerate(DM_DIMENSIONS)])   
 facts_fill = PostgresOperator(
     task_id="facts_fill",
     dag=dag,
     sql='INSERT INTO {{ params.schemaName }}.payment_report_fct SELECT ' + all_ids + ', tmp.is_vip, tmp.sum' +\
-        ' FROM {{ params.schemaName }}.payment_report_tmp_oneyear tmp' + all_joins
+        ' FROM {{ params.schemaName }}.payment_report_tmp_oneyear tmp\n' + all_joins
 )
 
 """
