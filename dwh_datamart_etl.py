@@ -31,6 +31,7 @@ tmp_tbl_collect = PostgresOperator(
     dag=dag,
     sql="""
 DROP TABLE IF EXISTS {{ params.schemaName }}.payment_report_tmp_oneyear;
+
 CREATE TABLE {{ params.schemaName }}.payment_report_tmp_oneyear AS (
   WITH raw_data AS (
       SELECT legal_type,
@@ -55,6 +56,8 @@ FROM oneyear_data
 GROUP BY {{ params.dimensionsText }}, is_vip
 ORDER BY {{ params.dimensionsText }}, is_vip
 );
+
+GRANT ALL PRIVILEGES ON {{ params.schemaName }}.payment_report_tmp_oneyear TO {{ params.schemaName }};
 """
 )
 
