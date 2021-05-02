@@ -85,17 +85,6 @@ facts_fill = PostgresOperator(
         ' FROM {{ params.schemaName }}.payment_report_tmp_oneyear tmp\n' + all_joins
 )
 
-"""
-INSERT INTO {{ params.schemaName }}.payment_report_fct
-SELECT biy.id, lt.id, d.id, ry.id, tmp.is_vip, tmp.sum
-FROM {{ params.schemaName }}.payment_report_tmp_oneyear tmp
-JOIN {{ params.schemaName }}.payment_report_dim_billing_year biy ON tmp.billing_year=biy.billing_year_key
-JOIN {{ params.schemaName }}.payment_report_dim_legal_type lt ON tmp.legal_type=lt.legal_type_key
-JOIN {{ params.schemaName }}.payment_report_dim_district d ON tmp.district=d.district_key
-JOIN {{ params.schemaName }}.payment_report_dim_registration_year ry ON tmp.registration_year=ry.registration_year_key;
-"""
-
-
 tmp_tbl_drop = PostgresOperator(
     task_id="tmp_tbl_drop",
     dag=dag,
