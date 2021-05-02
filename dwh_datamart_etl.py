@@ -7,7 +7,7 @@ from airflow.operators.dummy_operator import DummyOperator
 
 USERNAME = 'sperfilyev'
 DM_DIMENSIONS = ('billing_year', 'legal_type', 'district', 'registration_year')
-DM_DIMS_TEXT = ','.join(dm_dimensions)
+DM_DIMS_TEXT = ','.join(DM_DIMENSIONS)
 
 default_args = {
     'owner': USERNAME,
