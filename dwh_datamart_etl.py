@@ -40,7 +40,7 @@ CREATE TABLE {{ params.schemaName }}.payment_report_tmp_oneyear AS (
              is_vip,
              EXTRACT(YEAR FROM to_date(billing_period_key, 'YYYY-MM')) AS billing_year,
              billing_period_key,
-             pay_sum AS billing_sum
+             pay_sum
       FROM {{ params.schemaName }}.dds_t_lnk_payment lp
       JOIN {{ params.schemaName }}.dds_t_hub_billing_period hbp ON lp.billing_period_pk=hbp.billing_period_pk
       JOIN {{ params.schemaName }}.dds_t_hub_user hu ON lp.user_pk=hu.user_pk
@@ -51,7 +51,7 @@ CREATE TABLE {{ params.schemaName }}.payment_report_tmp_oneyear AS (
       WHERE billing_year={{ execution_date.year }}
   )
 SELECT {{ params.dimensionsText }},
-       is_vip, sum(billing_sum)
+       is_vip, sum(pay_sum)
 FROM oneyear_data
 GROUP BY {{ params.dimensionsText }}, is_vip
 ORDER BY {{ params.dimensionsText }}, is_vip
