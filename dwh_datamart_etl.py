@@ -36,7 +36,7 @@ CREATE TABLE {{ params.schemaName }}.payment_report_tmp_oneyear AS (
   WITH raw_data AS (
       SELECT legal_type,
              district,
-             EXTRACT(YEAR FROM registered_at) as registration_year,
+             EXTRACT(YEAR FROM su.effective_from) as registration_year,
              is_vip,
              EXTRACT(YEAR FROM to_date(billing_period_key, 'YYYY-MM')) AS billing_year,
              billing_period_key,
@@ -45,7 +45,7 @@ CREATE TABLE {{ params.schemaName }}.payment_report_tmp_oneyear AS (
       JOIN {{ params.schemaName }}.dds_t_hub_billing_period hbp ON lp.billing_period_pk=hbp.billing_period_pk
       JOIN {{ params.schemaName }}.dds_t_hub_user hu ON lp.user_pk=hu.user_pk
       JOIN {{ params.schemaName }}.dds_t_sat_payment sp ON lp.pay_pk=sp.pay_pk
-      LEFT JOIN mdm."user" mdmu ON hu.user_key=mdmu.id::TEXT),
+      LEFT JOIN {{ params.schemaName }}.dds_t_sat_user_mdm su ON hu.user_pk=su.user_pk),
   oneyear_data AS (
       SELECT * FROM raw_data
       WHERE billing_year={{ execution_date.year }}
