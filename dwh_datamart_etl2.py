@@ -62,11 +62,11 @@ dimensions_fill = [
         task_id="dim_{0}_fill".format(dim_name),
         dag=dag,
         sql="""
-INSERT INTO {{{{ params.schemaName }}}}.payment_report_dim_{} ({}_key)
-SELECT DISTINCT {} AS {}_key
+INSERT INTO {{{{ params.schemaName }}}}.payment_report_dim_{0} ({0}_key)
+SELECT DISTINCT {0} AS {0}_key
 FROM {{{{ params.schemaName }}}}.payment_report_tmp_oneyear
-LEFT JOIN {{{{ params.schemaName }}}}.payment_report_dim_{} ON {}_key={}
-WHERE {}_key is NULL;""".format(dim_name)
+LEFT JOIN {{{{ params.schemaName }}}}.payment_report_dim_{0} ON {0}_key={0}
+WHERE {0}_key is NULL;""".format(dim_name)
     ) for dim_name in DM_DIMENSIONS
 ]
 
