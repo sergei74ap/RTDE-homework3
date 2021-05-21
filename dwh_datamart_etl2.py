@@ -59,7 +59,7 @@ GRANT ALL PRIVILEGES ON {{ params.schemaName }}.payment_report_tmp_oneyear TO {{
 
 dimensions_fill = [
     PostgresOperator(
-        task_id="dim_{dim_name}_fill".format(dim_name=dim_name),
+        task_id="dim_" + dim_name + "_fill",
         params={'dimName': dim_name},
         dag=dag,
         sql="""
