@@ -74,7 +74,7 @@ INSERT INTO {{ params.schemaName }}.payment_report_dim_{{ params.dimName }} ({{ 
 ]
 
 all_joins = '\n'.join(
-    ["JOIN {{ params.schemaName }}.payment_report_dim_{dim_name} dim{dim_indx} ON tmp.{dim_name}=dim{dim_indx}.{dim_name}_key".\
+    ["JOIN {{{{ params.schemaName }}}}.payment_report_dim_{dim_name} dim{dim_indx} ON tmp.{dim_name}=dim{dim_indx}.{dim_name}_key".\
      format(dim_name=dim_name, dim_indx=dim_indx) for dim_indx, dim_name in enumerate(DM_DIMENSIONS)]
 )
 #    'JOIN {{ params.schemaName }}.payment_report_dim_' + dim_name + ' dim' + str(dim_num) +\
@@ -88,9 +88,9 @@ facts_fill = PostgresOperator(
     dag=dag,
     sql="""
 INSERT INTO {{ params.schemaName }}.payment_report_fct
-    SELECT {{ params.allIds }}, tmp.is_vip, tmp.sum
-    FROM {{ params.schemaName }}.payment_report_tmp_oneyear tmp
-    """ + all_joins
+SELECT {{ params.allIds }}, tmp.is_vip, tmp.sum
+FROM {{ params.schemaName }}.payment_report_tmp_oneyear tmp
+""" + all_joins
 )
 
 tmp_tbl_drop = PostgresOperator(
