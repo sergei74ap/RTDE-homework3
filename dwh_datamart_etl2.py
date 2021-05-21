@@ -24,7 +24,7 @@ dag = DAG(
 
 tmp_tbl_collect = PostgresOperator(
     task_id="tmp_tbl_collect", 
-    params={'dimensionsText': ', '.join(DM_DIMENSIONS)}
+    params={'dimensionsText': ', '.join(DM_DIMENSIONS)},
     dag=dag,
     sql="""
 DROP TABLE IF EXISTS {{ params.schemaName }}.payment_report_tmp_oneyear;
