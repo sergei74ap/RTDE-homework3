@@ -17,13 +17,14 @@ dag = DAG(
     description='DWH DM ETL tasks by ' + USERNAME,
     schedule_interval="@yearly",
     max_active_runs=1,
-    params={'schemaName': USERNAME, 'dimensionsText': ', '.join(DM_DIMENSIONS)},
+    params={'schemaName': USERNAME},
 )
 
 ## ОПИШЕМ ВСЕ ОПЕРАЦИИ ЗАГРУЗКИ ДАННЫХ
 
 tmp_tbl_collect = PostgresOperator(
     task_id="tmp_tbl_collect", 
+    params={'dimensionsText': ', '.join(DM_DIMENSIONS)}
     dag=dag,
     sql="""
 DROP TABLE IF EXISTS {{ params.schemaName }}.payment_report_tmp_oneyear;
@@ -77,7 +78,7 @@ all_joins = '\n'.join([
     ' JOIN {{ params.schemaName }}.payment_report_dim_' + dim_name + ' dim' + str(dim_num) +\
     ' ON tmp.' + dim_name + '=dim' + str(dim_num) + '.' + dim_name + '_key' for dim_num, dim_name in enumerate(DM_DIMENSIONS)
     ])
-all_ids = ', '.join(['dim' + str(dim_num) + '.id' for dim_num, dim_name in enumerate(DM_DIMENSIONS)])   
+all_ids = ', '.join(['dim{0}.id'.format(dim_num) for dim_num, _ in enumerate(DM_DIMENSIONS)])   
 facts_fill = PostgresOperator(
     task_id="facts_fill",
     params={'allJoins': all_joins, 'allIds': all_ids},
