@@ -59,7 +59,7 @@ GRANT ALL PRIVILEGES ON {{ params.schemaName }}.payment_report_tmp_oneyear TO {{
 
 dimensions_fill = [
     PostgresOperator(
-        task_id="dim_" + dim_name + "_fill",
+        task_id="dim_{0}_fill".format(dim_name),
         params={'dimName': dim_name},
         dag=dag,
         sql="""
@@ -86,8 +86,7 @@ facts_fill = PostgresOperator(
 INSERT INTO {{ params.schemaName }}.payment_report_fct
     SELECT {{ params.allIds }}, tmp.is_vip, tmp.sum
     FROM {{ params.schemaName }}.payment_report_tmp_oneyear tmp
-    {{ params.allJoins }}
-        """
+    """ + all_joins
 )
 
 tmp_tbl_drop = PostgresOperator(
