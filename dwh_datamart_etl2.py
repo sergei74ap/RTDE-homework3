@@ -80,10 +80,14 @@ all_joins = '\n'.join([
 all_ids = ', '.join(['dim' + str(dim_num) + '.id' for dim_num, dim_name in enumerate(DM_DIMENSIONS)])   
 facts_fill = PostgresOperator(
     task_id="facts_fill",
+    params={'allJoins': all_joins, 'allIds': all_ids},
     dag=dag,
-    sql='INSERT INTO {{ params.schemaName }}.payment_report_fct' +\
-        '\n SELECT ' + all_ids + ', tmp.is_vip, tmp.sum' +\
-        '\n FROM {{ params.schemaName }}.payment_report_tmp_oneyear tmp\n ' + all_joins
+    sql="""
+INSERT INTO {{ params.schemaName }}.payment_report_fct
+    SELECT {{ params.allIds }}, tmp.is_vip, tmp.sum
+    FROM {{ params.schemaName }}.payment_report_tmp_oneyear tmp
+    {{ params.allJoins }}
+        """
 )
 
 tmp_tbl_drop = PostgresOperator(
