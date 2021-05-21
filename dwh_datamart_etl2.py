@@ -59,7 +59,7 @@ GRANT ALL PRIVILEGES ON {{ params.schemaName }}.payment_report_tmp_oneyear TO {{
 
 dimensions_fill = [
     PostgresOperator(
-        task_id=f"dim_{dim_name}_fill",
+        task_id="dim_{dim_name}_fill".format(dim_name=dim_name),
         dag=dag,
         sql='INSERT INTO {{ params.schemaName }}.payment_report_dim_' + dim_name + '(' + dim_name + '_key)' +\
             '\n SELECT DISTINCT ' + dim_name + ' AS ' + dim_name + '_key' +\
