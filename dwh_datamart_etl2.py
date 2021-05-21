@@ -60,15 +60,13 @@ GRANT ALL PRIVILEGES ON {{ params.schemaName }}.payment_report_tmp_oneyear TO {{
 dimensions_fill = [
     PostgresOperator(
         task_id="dim_{0}_fill".format(dim_name),
-        params={'dimName': dim_name},
         dag=dag,
         sql="""
-INSERT INTO {{ params.schemaName }}.payment_report_dim_{{ params.dimName }} ({{ params.dimName }}_key)
-    SELECT DISTINCT {{ params.dimName }} AS {{ params.dimName }}_key
-    FROM {{ params.schemaName }}.payment_report_tmp_oneyear
-    LEFT JOIN {{ params.schemaName }}.payment_report_dim_{{ params.dimName }}
-    ON {{ params.dimName }}_key={{ params.dimName }}
-    WHERE {{ params.dimName }}_key is NULL;"""
+INSERT INTO {{{{ params.schemaName }}}}.payment_report_dim_{} ({}_key)
+SELECT DISTINCT {} AS {}_key
+FROM {{{{ params.schemaName }}}}.payment_report_tmp_oneyear
+LEFT JOIN {{{{ params.schemaName }}}}.payment_report_dim_{} ON {}_key={}
+WHERE {}_key is NULL;""".format(dim_name)
     ) for dim_name in DM_DIMENSIONS
 ]
 
@@ -81,14 +79,12 @@ all_ids = ', '.join(
 )   
 facts_fill = PostgresOperator(
     task_id="facts_fill",
-    params={'allJoins': all_joins, 'allIds': all_ids},
     dag=dag,
     sql="""
 INSERT INTO {{{{ params.schemaName }}}}.payment_report_fct
 SELECT {all_ids}, tmp.is_vip, tmp.sum
 FROM {{{{ params.schemaName }}}}.payment_report_tmp_oneyear tmp
-{all_joins};
-""".format(all_ids=all_ids, all_joins=all_joins)
+{all_joins};""".format(all_ids=all_ids, all_joins=all_joins)
 )
 
 tmp_tbl_drop = PostgresOperator(
