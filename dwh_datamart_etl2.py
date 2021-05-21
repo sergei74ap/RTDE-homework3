@@ -77,10 +77,8 @@ all_joins = '\n'.join(
     ["JOIN {{{{ params.schemaName }}}}.payment_report_dim_{dim_name} dim{dim_indx} ON tmp.{dim_name}=dim{dim_indx}.{dim_name}_key".\
      format(dim_name=dim_name, dim_indx=dim_indx) for dim_indx, dim_name in enumerate(DM_DIMENSIONS)]
 )
-#    'JOIN {{ params.schemaName }}.payment_report_dim_' + dim_name + ' dim' + str(dim_num) +\
-#    ' ON tmp.' + dim_name + '=dim' + str(dim_num) + '.' + dim_name + '_key' for dim_num, dim_name in enumerate(DM_DIMENSIONS)
 all_ids = ', '.join(
-    ['dim{0}.id'.format(dim_num) for dim_num, _ in enumerate(DM_DIMENSIONS)]
+    ['dim{0}.id'.format(dim_indx) for dim_indx, _ in enumerate(DM_DIMENSIONS)]
 )   
 facts_fill = PostgresOperator(
     task_id="facts_fill",
