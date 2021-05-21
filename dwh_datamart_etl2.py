@@ -47,8 +47,7 @@ CREATE TABLE {{ params.schemaName }}.payment_report_tmp_oneyear AS (
       SELECT * FROM raw_data
       WHERE billing_year={{ execution_date.year }}
   )
-SELECT {{ params.dimensionsText }},
-       is_vip, sum(pay_sum)
+SELECT {{ params.dimensionsText }}, is_vip, sum(pay_sum)
 FROM oneyear_data
 GROUP BY {{ params.dimensionsText }}, is_vip
 ORDER BY {{ params.dimensionsText }}, is_vip
@@ -74,11 +73,15 @@ INSERT INTO {{ params.schemaName }}.payment_report_dim_{{ params.dimName }} ({{ 
     ) for dim_name in DM_DIMENSIONS
 ]
 
-all_joins = '\n'.join([
-    ' JOIN {{ params.schemaName }}.payment_report_dim_' + dim_name + ' dim' + str(dim_num) +\
-    ' ON tmp.' + dim_name + '=dim' + str(dim_num) + '.' + dim_name + '_key' for dim_num, dim_name in enumerate(DM_DIMENSIONS)
-    ])
-all_ids = ', '.join(['dim{0}.id'.format(dim_num) for dim_num, _ in enumerate(DM_DIMENSIONS)])   
+all_joins = '\n'.join(
+    ["JOIN {{ params.schemaName }}.payment_report_dim_{dim_name} dim{dim_indx} ON tmp.{dim_name}=dim{dim_indx}.{dim_name}_key".\
+     format(dim_name=dim_name, dim_indx=dim_indx) for dim_indx, dim_name in enumerate(DM_DIMENSIONS)]
+)
+#    'JOIN {{ params.schemaName }}.payment_report_dim_' + dim_name + ' dim' + str(dim_num) +\
+#    ' ON tmp.' + dim_name + '=dim' + str(dim_num) + '.' + dim_name + '_key' for dim_num, dim_name in enumerate(DM_DIMENSIONS)
+all_ids = ', '.join(
+    ['dim{0}.id'.format(dim_num) for dim_num, _ in enumerate(DM_DIMENSIONS)]
+)   
 facts_fill = PostgresOperator(
     task_id="facts_fill",
     params={'allJoins': all_joins, 'allIds': all_ids},
