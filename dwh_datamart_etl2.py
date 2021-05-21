@@ -68,8 +68,7 @@ INSERT INTO {{ params.schemaName }}.payment_report_dim_{{ params.dimName }} ({{ 
     FROM {{ params.schemaName }}.payment_report_tmp_oneyear
     LEFT JOIN {{ params.schemaName }}.payment_report_dim_{{ params.dimName }}
     ON {{ params.dimName }}_key={{ params.dimName }}
-    WHERE {{ params.dimName }}_key is NULL;
-            """
+    WHERE {{ params.dimName }}_key is NULL;"""
     ) for dim_name in DM_DIMENSIONS
 ]
 
@@ -85,10 +84,11 @@ facts_fill = PostgresOperator(
     params={'allJoins': all_joins, 'allIds': all_ids},
     dag=dag,
     sql="""
-INSERT INTO {{ params.schemaName }}.payment_report_fct
-SELECT {{ params.allIds }}, tmp.is_vip, tmp.sum
-FROM {{ params.schemaName }}.payment_report_tmp_oneyear tmp
-""" + all_joins
+INSERT INTO {{{{ params.schemaName }}}}.payment_report_fct
+SELECT {all_ids}, tmp.is_vip, tmp.sum
+FROM {{{{ params.schemaName }}}}.payment_report_tmp_oneyear tmp
+{all_joins};
+""".format(all_ids=all_ids, all_joins=all_joins)
 )
 
 tmp_tbl_drop = PostgresOperator(
