@@ -60,12 +60,16 @@ GRANT ALL PRIVILEGES ON {{ params.schemaName }}.payment_report_tmp_oneyear TO {{
 dimensions_fill = [
     PostgresOperator(
         task_id="dim_{dim_name}_fill".format(dim_name=dim_name),
+        params={'dimName': dim_name},
         dag=dag,
-        sql='INSERT INTO {{ params.schemaName }}.payment_report_dim_' + dim_name + '(' + dim_name + '_key)' +\
-            '\n SELECT DISTINCT ' + dim_name + ' AS ' + dim_name + '_key' +\
-            '\n FROM {{ params.schemaName }}.payment_report_tmp_oneyear' +\
-            '\n LEFT JOIN {{ params.schemaName }}.payment_report_dim_' + dim_name +\
-            '\n ON ' + dim_name + '_key=' + dim_name + '\n WHERE ' + dim_name + '_key is NULL;'
+        sql="""
+INSERT INTO {{ params.schemaName }}.payment_report_dim_{{ params.dimName }} ({{ params.dimName }}_key)
+    SELECT DISTINCT {{ params.dimName }} AS {{ params.dimName }}_key
+    FROM {{ params.schemaName }}.payment_report_tmp_oneyear
+    LEFT JOIN {{ params.schemaName }}.payment_report_dim_{{ params.dimName }}
+    ON {{ params.dimName }}_key={{ params.dimName }}
+    WHERE {{ params.dimName }}_key is NULL;
+            """
     ) for dim_name in DM_DIMENSIONS
 ]
 
