@@ -144,6 +144,7 @@ SELECT * FROM {{{{ params.schemaName }}}}.dds_v_lnk_{0}_etl;
 # ------------------------------------------------------------
 ## Заполняем сателлиты
 def build_sat_sql(sat_name, sat_source, sat_context):
+
     if sat_name in DDS_LINKS:
         src_data_str = """
 with source_data as (
@@ -154,9 +155,8 @@ with source_data as (
            load_dts,
            rec_source
     from {{{{ params.schemaName }}}}.ods_t_{sat_source}_hashed
-    where extract(year from load_dts) = {{{{ execution_date.year }}}}
-),
-"""
+    where extract(year from load_dts) = {{{{ execution_date.year }}}}),
+""".format(sat_name=sat_name, sat_source=sat_source, sat_context_str=', '.join(sat_context))
     else:
         src_data_str = """
 with hashed_oneyear as (
@@ -177,7 +177,7 @@ with hashed_oneyear as (
                 rec_source
          from oneyear_numbered
          where row_num=1),
-"""
+""".format(sat_name=sat_name, sat_source=sat_source, sat_context_str=', '.join(sat_context))
     
     return """
 delete from {{{{ params.schemaName }}}}.dds_t_sat_{sat_name} 
