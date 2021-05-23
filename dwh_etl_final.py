@@ -70,11 +70,11 @@ INSERT INTO {{ params.schemaName}}.ods_t_{{ params.odsSource }}_hashed
 
 dds_hubs_fill = [
     PostgresOperator(
-        task_id="hub_{0}_fill".format(dds_hub['hub_name']),
+        task_id="hub_{0}_fill".format(dds_hub['etl_view']),
         dag=dag,
         sql="""
 INSERT INTO {{{{ params.schemaName }}}}.dds_t_hub_{hub_name} 
-SELECT * FROM {{ params.schemaName }}.dds_v_hub_{etl_view}_etl;
+SELECT * FROM {{{{ params.schemaName }}}}.dds_v_hub_{etl_view}_etl;
 """.format(hub_name=dds_hub['hub_name'], etl_view=dds_hub['etl_view'])
     ) for dds_hub in DDS_HUBS
 ]
