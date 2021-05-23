@@ -60,8 +60,8 @@ mdm_reload = [
         params={'mdmSource': mdm_source},
         dag=dag,
         sql="""
-DELETE FROM {{ params.schemaName }}.ods_t_{{ params.mdmSource }} CASCADE;
-DELETE FROM {{ params.schemaName }}.ods_t_{{ params.mdmSource }}_hashed CASCADE;
+TRUNCATE {{ params.schemaName }}.ods_t_{{ params.mdmSource }};
+TRUNCATE {{ params.schemaName }}.ods_t_{{ params.mdmSource }}_hashed;
 
 INSERT INTO {{ params.schemaName }}.ods_t_{{ params.mdmSource }} SELECT * FROM mdm."{{ params.mdmSource }}";
 
