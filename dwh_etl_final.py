@@ -38,7 +38,7 @@ DDS_HUBS = (
     {'hub_name': 'billing_period',  'etl_views': ['billing_period']},
     {'hub_name': 'paysys',          'etl_views': ['paysys']},
     {'hub_name': 'service',         'etl_views': ['service_issue', 'service_billing']},
-    {'hub_name': 'tariff',          'etl_views': ['tariff']}
+    {'hub_name': 'tariff',          'etl_views': ['tariff']},
     {'hub_name': 'device',          'etl_views': ['device']},
 )
 
