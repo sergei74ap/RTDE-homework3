@@ -43,10 +43,10 @@ DDS_HUBS = (
 )
 
 DDS_LINKS = (
-    'billing', 
+#    'billing', 
     'issue', 
     'payment', 
-    'traffic',
+#    'traffic',
 );
 
 default_args = {
