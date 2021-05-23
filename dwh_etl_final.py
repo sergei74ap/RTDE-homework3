@@ -145,7 +145,7 @@ SELECT * FROM {{{{ params.schemaName }}}}.dds_v_lnk_{0}_etl;
 ## Заполняем сателлиты
 def build_sat_sql(sat_name, sat_source, sat_context):
     if sat_name in DDS_LINKS:
-        source_data_str = """
+        src_data_str = """
 with source_data as (
     select {sat_name}_pk, 
            {sat_name}_hashdiff,
@@ -158,7 +158,7 @@ with source_data as (
 ),
 """
     else:
-        source_data_str = """
+        src_data_str = """
 with hashed_oneyear as (
     select *
     from {{{{ params.schemaName }}}}.ods_t_{sat_source}_hashed
