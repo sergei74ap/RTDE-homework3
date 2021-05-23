@@ -137,14 +137,13 @@ SELECT * FROM {{{{ params.schemaName }}}}.dds_v_lnk_{0}_etl;
 
 # Точки сборки
 etl_start = DummyOperator(task_id="etl_start", dag=dag)
-all_mdm_reloaded = DummyOperator(task_id="all_mdm_reloaded", dag=dag)
 all_ods_reloaded = DummyOperator(task_id="all_ods_reloaded", dag=dag)
 all_hubs_loaded = DummyOperator(task_id="all_hubs_loaded", dag=dag)
 all_links_loaded = DummyOperator(task_id="all_links_loaded", dag=dag)
 all_sats_loaded = DummyOperator(task_id="all_sats_loaded", dag=dag)
 
 # Последовательность выполнения задач
-etl_start >> mdm_reload >> all_mdm_reloaded >> ods_reload >> all_ods_reloaded 
+etl_start >> [mdm_reload, ods_reload] >> all_ods_reloaded 
 
 for one_hub in dds_hubs_fill:
     all_ods_reloaded >> one_hub[0]
