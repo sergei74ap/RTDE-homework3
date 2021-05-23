@@ -150,8 +150,9 @@ where extract(year from load_dts) = {{{{ execution_date.year }}}};
 
 insert into {{{{ params.schemaName }}}}.dds_t_sat_{sat_name}
 with source_data as (
-    select {sat_name}_pk, {sat_name}_hashdiff,
-           """ + ', '.join(sat_context) + """,
+    select {sat_name}_pk, 
+           {sat_name}_hashdiff,
+           {sat_context_str},
            effective_from,
            load_dts,
            rec_source
@@ -167,13 +168,14 @@ with source_data as (
      latest_records as (
          select *
          from (
-                  select {sat_name}_pk,
+                  select {sat_name}_pk, 
                          {sat_name}_hashdiff,
                          load_dts,
                          rank() over (partition by {sat_name}_pk order by load_dts desc) as row_rank
                   from update_records
               ) as ranked_recs
-         where row_rank = 1),
+         where row_rank = 1
+     ),
      records_to_insert as (
          select distinct a.*
          from source_data as a
@@ -183,7 +185,7 @@ with source_data as (
          where latest_records.{sat_name}_hashdiff is null
      )
 select * from records_to_insert;
-""".format(sat_name=sat_name, sat_source=sat_source, sat_context=sat_context)
+""".format(sat_name=sat_name, sat_source=sat_source, sat_context_str='.join(sat_context))
 
 dds_sats_fill = [
     PostgresOperator(
