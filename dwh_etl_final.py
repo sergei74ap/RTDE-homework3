@@ -70,7 +70,7 @@ INSERT INTO {{ params.schemaName}}.ods_t_{{ params.odsSource }}_hashed
 
 dds_hubs_fill = [
     PostgresOperator(
-        task_id="hub_{0}_fill".format(hub_name),
+        task_id="hub_{0}_fill".format(dds_hub['hub_name']),
         dag=dag,
         sql="""
 INSERT INTO {{{{ params.schemaName }}}}.dds_t_hub_{hub_name} 
