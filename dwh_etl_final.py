@@ -144,11 +144,8 @@ SELECT * FROM {{{{ params.schemaName }}}}.dds_v_lnk_{0}_etl;
 # ------------------------------------------------------------
 ## Заполняем сателлиты
 def build_sat_sql(sat_name, sat_source, sat_context):
-    return """
-delete from {{{{ params.schemaName }}}}.dds_t_sat_{sat_name} 
-where extract(year from load_dts) = {{{{ execution_date.year }}}};
-
-insert into {{{{ params.schemaName }}}}.dds_t_sat_{sat_name}
+    if sat_name in DDS_LINKS:
+        source_data_str = """
 with source_data as (
     select {sat_name}_pk, 
            {sat_name}_hashdiff,
@@ -159,6 +156,35 @@ with source_data as (
     from {{{{ params.schemaName }}}}.ods_t_{sat_source}_hashed
     where extract(year from load_dts) = {{{{ execution_date.year }}}}
 ),
+"""
+    else:
+        source_data_str = """
+with hashed_oneyear as (
+    select *
+    from {{{{ params.schemaName }}}}.ods_t_{sat_source}_hashed
+    where extract(year from load_dts) = {{{{ execution_date.year }}}}
+),
+     oneyear_numbered as (
+         select *,
+                row_number() over (partition by {sat_name}_pk, {sat_name}_hashdiff order by effective_from asc) as row_num
+         from hashed_oneyear),
+     source_data as (
+         select {sat_name}_pk,
+                {sat_name}_hashdiff,
+                {sat_context_str},
+                effective_from,
+                load_dts,
+                rec_source
+         from oneyear_numbered
+         where row_num=1),
+"""
+    
+    return """
+delete from {{{{ params.schemaName }}}}.dds_t_sat_{sat_name} 
+where extract(year from load_dts) = {{{{ execution_date.year }}}};
+
+insert into {{{{ params.schemaName }}}}.dds_t_sat_{sat_name}
+{src_data_str}
      update_records as (
          select s.*
          from {{{{ params.schemaName }}}}.dds_t_sat_{sat_name} as s
@@ -185,7 +211,7 @@ with source_data as (
          where latest_records.{sat_name}_hashdiff is null
      )
 select * from records_to_insert;
-""".format(sat_name=sat_name, sat_source=sat_source, sat_context_str=', '.join(sat_context))
+""".format(sat_name=sat_name, sat_source=sat_source, sat_context_str=', '.join(sat_context), src_data_str=src_data_str)
 
 dds_sats_fill = [
     PostgresOperator(
