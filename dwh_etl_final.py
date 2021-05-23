@@ -18,20 +18,6 @@ MDM_SOURCES = (
     'user',
 )
 
-"""
-DDS_HUBS = (
-    {'hub_name': 'user',            'etl_view': 'user_mdm'},
-    {'hub_name': 'user',            'etl_view': 'user_payment'},
-    {'hub_name': 'account',         'etl_view': 'account'},
-    {'hub_name': 'billing_period',  'etl_view': 'billing_period'},
-    {'hub_name': 'paysys',          'etl_view': 'paysys'},
-    {'hub_name': 'service',         'etl_view': 'service_issue'},
-    {'hub_name': 'service',         'etl_view': 'service_billing'},
-    {'hub_name': 'tariff',          'etl_view': 'tariff'},
-    {'hub_name': 'device',          'etl_view': 'device'},
-)
-"""
-
 DDS_HUBS = (
     {'hub_name': 'user',            'etl_views': ['user_mdm', 'user_payment']},
     {'hub_name': 'account',         'etl_views': ['account']},
@@ -43,10 +29,10 @@ DDS_HUBS = (
 )
 
 DDS_LINKS = (
-#    'billing', 
+    'billing', 
     'issue', 
     'payment', 
-#    'traffic',
+    'traffic',
 );
 
 default_args = {
@@ -108,16 +94,20 @@ INSERT INTO {{ params.schemaName}}.ods_t_{{ params.odsSource }}_hashed
     ) for ods_source in ODS_SOURCES
 ]
 
-dds_hubs_fill = [
-    PostgresOperator(
-        task_id="hub_{0}_fill".format(etl_view),
-        dag=dag,
-        sql="""
+
+dds_hubs_fill = []
+for dds_hub in DDS_HUBS:
+    for i, etl_view in enumerate(dds_hub['etl_views']):
+        dds_hubs_fill.append(PostgresOperator(
+            task_id="hub_{0}_fill".format(etl_view),
+            dag=dag,
+            sql="""
 INSERT INTO {{{{ params.schemaName }}}}.dds_t_hub_{hub_name} 
 SELECT * FROM {{{{ params.schemaName }}}}.dds_v_hub_{etl_view}_etl;
 """.format(hub_name=dds_hub['hub_name'], etl_view=etl_view)
-    ) for dds_hub in DDS_HUBS for etl_view in dds_hub['etl_views']
-]
+        ) 
+        if i > 0:
+            dds_hubs_fill[-2] >> dds_hubs_fill[-1]
 
 dds_links_fill = [
     PostgresOperator(
