@@ -43,7 +43,7 @@ DDS_SATS = (
     {'sat_name': 'payment', 'sat_source': 'payment', 'sat_context': ['pay_doc_num', 'pay_sum']},
     {'sat_name': 'issue',   'sat_source': 'issue',   'sat_context': ['title', 'description', 'end_time']},
     {'sat_name': 'billing', 'sat_source': 'billing', 'sat_context': ['billing_sum']},
-    {'sat_name': 'traffic', 'sat_source': 'traffic', 'sat_context': ['bytes_send', 'bytes_received']},
+    {'sat_name': 'traffic', 'sat_source': 'traffic', 'sat_context': ['bytes_sent', 'bytes_received']},
     {'sat_name': 'device',  'sat_source': 'traffic', 'sat_context': ['device_ip_addr']}, 
 )
 
