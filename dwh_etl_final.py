@@ -45,7 +45,7 @@ dag = DAG(
 
 ods_reload = [
     PostgresOperator(
-        task_id="ods_{0}_reload".format(ods_source), 
+        task_id="ods_{0}_reload".format(ods_source['source_name']), 
         dag=dag,
         params={'odsSource': ods_source['source_name'], 'dateField': ods_source['date_field']},
         sql="""
