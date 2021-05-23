@@ -67,7 +67,7 @@ INSERT INTO {{ params.schemaName }}.ods_t_{{ params.mdmSource }} SELECT * FROM m
 
 INSERT INTO {{ params.schemaName }}.ods_t_{{ params.mdmSource }}_hashed
     (SELECT v.*, '{{ execution_date }}'::DATE AS load_dts
-     FROM {{ params.schemaName }}.ods_v_{{ params.mdmSource }}_etl AS v;"""
+     FROM {{ params.schemaName }}.ods_v_{{ params.mdmSource }}_etl AS v);"""
     ) for mdm_source in MDM_SOURCES
 ]
 
