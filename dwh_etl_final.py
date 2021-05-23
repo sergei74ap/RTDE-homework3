@@ -143,7 +143,7 @@ SELECT * FROM {{{{ params.schemaName }}}}.dds_v_lnk_{0}_etl;
 
 # ------------------------------------------------------------
 ## Заполняем сателлиты
-def build_sat_sql(sat_name, sat_source=sat_name, sat_context):
+def build_sat_sql(sat_name, sat_source, sat_context):
     return """
 delete from {{{{ params.schemaName }}}}.dds_t_sat_{sat_name} 
 where extract(year from load_dts) = {{{{ execution_date.year }}}};
