@@ -144,9 +144,10 @@ all_links_loaded = DummyOperator(task_id="all_links_loaded", dag=dag)
 all_sats_loaded = DummyOperator(task_id="all_sats_loaded", dag=dag)
 
 # Последовательность выполнения задач
-etl_start >> mdm_reload >> all_mdm_reloaded >> \
-ods_reload >> all_ods_reloaded >> \
-dds_links_fill >> all_links_loaded >> \
-all_sats_loaded
+etl_start >> mdm_reload >> all_mdm_reloaded >> ods_reload >> all_ods_reloaded 
 
-#dds_hubs_fill >> all_hubs_loaded >> \
+for one_hub in dds_hubs_fill:
+    all_ods_reloaded >> one_hub[0]
+    one_hub[-1] >> all_hubs_loaded
+
+all_hubs_loaded >> dds_links_fill >> all_links_loaded >> all_sats_loaded
