@@ -38,6 +38,15 @@ DDS_LINKS = (
     'traffic',
 );
 
+DDS_SATS = (
+    {'sat_name': 'user',    'sat_source': 'payment', 'sat_context': ['phone']},
+    {'sat_name': 'payment', 'sat_source': 'payment', 'sat_context': ['pay_doc_num', 'pay_sum']},
+    {'sat_name': 'issue',   'sat_source': 'issue',   'sat_context': ['title', 'description', 'end_time']},
+    {'sat_name': 'billing', 'sat_source': 'billing', 'sat_context': ['billing_sum']},
+    {'sat_name': 'traffic', 'sat_source': 'traffic', 'sat_context': ['bytes_send', 'bytes_received']},
+    {'sat_name': 'device',  'sat_source': 'traffic', 'sat_context': ['device_ip_addr']}, 
+)
+
 default_args = {
     'owner': USERNAME,
     'start_date': datetime(2013, 1, 1, 0, 0, 0)
@@ -132,6 +141,62 @@ SELECT * FROM {{{{ params.schemaName }}}}.dds_v_lnk_{0}_etl;
     ) for dds_link in DDS_LINKS
 ]
 
+# ------------------------------------------------------------
+## Заполняем сателлиты
+def build_sat_sql(sat_name, sat_source=sat_name, sat_context):
+    return """
+delete from {{{{ params.schemaName }}}}.dds_t_sat_{sat_name} 
+where extract(year from load_dts) = {{{{ execution_date.year }}}};
+
+insert into {{{{ params.schemaName }}}}.dds_t_sat_{sat_name}
+with source_data as (
+    select {sat_name}_pk, {sat_name}_hashdiff,
+           """ + ', '.join(sat_context) + """,
+           effective_from,
+           load_dts,
+           rec_source
+    from {{{{ params.schemaName }}}}.ods_t_{sat_source}_hashed
+    where extract(year from load_dts) = {{{{ execution_date.year }}}}
+),
+     update_records as (
+         select s.*
+         from {{{{ params.schemaName }}}}.dds_t_sat_{sat_name} as s
+                  join source_data as src
+                       on s.{sat_name}_pk = src.{sat_name}_pk and s.load_dts <= (select max(load_dts) from source_data)
+     ),
+     latest_records as (
+         select *
+         from (
+                  select {sat_name}_pk,
+                         {sat_name}_hashdiff,
+                         load_dts,
+                         rank() over (partition by {sat_name}_pk order by load_dts desc) as row_rank
+                  from update_records
+              ) as ranked_recs
+         where row_rank = 1),
+     records_to_insert as (
+         select distinct a.*
+         from source_data as a
+                  left join latest_records
+                            on latest_records.{sat_name}_hashdiff = a.{sat_name}_hashdiff and
+                               latest_records.{sat_name}_pk = a.{sat_name}_pk
+         where latest_records.{sat_name}_hashdiff is null
+     )
+select * from records_to_insert;
+""".format(sat_name=sat_name, sat_source=sat_source, sat_context=sat_context)
+
+dds_sats_fill = [
+    PostgresOperator(
+        task_id="sat_{0}_fill".format(dds_sat['sat_name']),
+        dag=dag,
+        sql=build_sat_sql(
+            sat_name=dds_sat['sat_name'], 
+            sat_source=dds_sat['sat_source'],
+            sat_context=dds_sat['sat_context'],
+        )
+    ) for dds_sat in DDS_SATS
+]
+
 # =============================================================
 ## ОПРЕДЕЛИМ СТРУКТУРУ DAG'А
 
@@ -150,4 +215,4 @@ for one_hub in dds_hubs_fill:
     all_ods_reloaded >> one_hub[0]
     one_hub[-1] >> all_hubs_loaded
 
-all_hubs_loaded >> dds_links_fill >> all_links_loaded >> all_sats_loaded
+all_hubs_loaded >> dds_links_fill >> all_links_loaded >> dds_sats_fill >> all_sats_loaded
