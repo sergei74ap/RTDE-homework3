@@ -185,7 +185,7 @@ with source_data as (
          where latest_records.{sat_name}_hashdiff is null
      )
 select * from records_to_insert;
-""".format(sat_name=sat_name, sat_source=sat_source, sat_context_str='.join(sat_context))
+""".format(sat_name=sat_name, sat_source=sat_source, sat_context_str=', '.join(sat_context))
 
 dds_sats_fill = [
     PostgresOperator(
