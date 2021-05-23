@@ -50,8 +50,10 @@ dag = DAG(
     params={'schemaName': USERNAME},
 )
 
-## ОПИШЕМ ВСЕ ОПЕРАЦИИ ЗАГРУЗКИ ДАННЫХ
+# =============================================================
+# ОПИШЕМ ВСЕ ОПЕРАЦИИ ЗАГРУЗКИ ДАННЫХ
 
+# Перезагружаем данные из MDM в ODS 
 mdm_reload = [
     PostgresOperator(
         task_id="mdm_{0}_reload".format(mdm_source), 
@@ -69,6 +71,8 @@ INSERT INTO {{ params.schemaName }}.ods_t_{{ params.mdmSource }}_hashed
     ) for mdm_source in MDM_SOURCES
 ]
 
+# ------------------------------------------------------------
+# Перезагружаем данные из STG в ODS за один год
 ods_reload = [
     PostgresOperator(
         task_id="ods_{0}_reload".format(ods_source['source_name']), 
@@ -94,20 +98,26 @@ INSERT INTO {{ params.schemaName}}.ods_t_{{ params.odsSource }}_hashed
     ) for ods_source in ODS_SOURCES
 ]
 
+# ------------------------------------------------------------
+# Заполняем хабы
 dds_hubs_fill = []
 for dds_hub in DDS_HUBS:
-    for i, etl_view in enumerate(dds_hub['etl_views']):
-        dds_hubs_fill.append(PostgresOperator(
+    one_hub_fill = [
+        PostgresOperator(
             task_id="hub_{0}_fill".format(etl_view),
             dag=dag,
             sql="""
 INSERT INTO {{{{ params.schemaName }}}}.dds_t_hub_{hub_name} 
 SELECT * FROM {{{{ params.schemaName }}}}.dds_v_hub_{etl_view}_etl;
 """.format(hub_name=dds_hub['hub_name'], etl_view=etl_view)
-        )) 
-        if i > 0:
-            dds_hubs_fill[-2] >> dds_hubs_fill[-1]
+        ) for etl_view in dds_hub['etl_views']
+    ]
+    for i in range(len(one_hub_fill) - 1): 
+        one_hub_fill[i] >> one_hub_fill[i + 1]
+    dds_hubs_fill.append(one_hub_fill)
 
+# ------------------------------------------------------------
+# Заполняем линки
 dds_links_fill = [
     PostgresOperator(
         task_id="lnk_{0}_fill".format(dds_link),
@@ -119,6 +129,7 @@ SELECT * FROM {{{{ params.schemaName }}}}.dds_v_lnk_{0}_etl;
     ) for dds_link in DDS_LINKS
 ]
 
+# =============================================================
 ## ОПРЕДЕЛИМ СТРУКТУРУ DAG'А
 
 # Точки сборки
