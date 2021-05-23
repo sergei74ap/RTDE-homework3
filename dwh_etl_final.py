@@ -198,6 +198,11 @@ dds_sats_fill = [
         )
     ) for dds_sat in DDS_SATS
 ]
+dds_sats_fill.append(PostgresOperator(
+        task_id="sat_user_mdm_fill",
+        dag=dag,
+        sql="INSERT INTO {{ params.schemaName }}.dds_t_sat_user_mdm SELECT * FROM {{ params.schemaName }}.dds_v_sat_user_mdm_etl;"
+))
 
 # =============================================================
 ## ОПРЕДЕЛИМ СТРУКТУРУ DAG'А
