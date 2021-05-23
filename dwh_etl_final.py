@@ -94,7 +94,6 @@ INSERT INTO {{ params.schemaName}}.ods_t_{{ params.odsSource }}_hashed
     ) for ods_source in ODS_SOURCES
 ]
 
-
 dds_hubs_fill = []
 for dds_hub in DDS_HUBS:
     for i, etl_view in enumerate(dds_hub['etl_views']):
@@ -105,7 +104,7 @@ for dds_hub in DDS_HUBS:
 INSERT INTO {{{{ params.schemaName }}}}.dds_t_hub_{hub_name} 
 SELECT * FROM {{{{ params.schemaName }}}}.dds_v_hub_{etl_view}_etl;
 """.format(hub_name=dds_hub['hub_name'], etl_view=etl_view)
-        ) 
+        )) 
         if i > 0:
             dds_hubs_fill[-2] >> dds_hubs_fill[-1]
 
