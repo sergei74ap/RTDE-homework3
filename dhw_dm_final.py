@@ -9,7 +9,7 @@ DDS_SOURCES = ('payment', 'billing', 'issue', 'traffic')
 
 default_args = {
     'owner': USERNAME,
-    'start_date': datetime(2013, 1, 1, 0, 0, 0)
+    'start_date': datetime(2012, 1, 1, 0, 0, 0)
 }
 
 dag = DAG(
