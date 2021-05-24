@@ -9,12 +9,12 @@ USERNAME = 'sperfilyev'
 # Подготовим метаданные для кодогенерации SQL
 DM_DIMENSIONS = ('report_year', 'legal_type', 'district', 'billing_mode', 'registration_year')
 #DDS_SOURCES = ('payment', 'billing', 'issue', 'traffic')
-DM_AGGREGATION = (
+DM_AGGREGATION = {
     'payment': {'from_billing': True,  'fields': "pay_sum",                    "formula": "sum(pay_sum) AS payment_sum"},
     'billing': {'from_billing': True,  'fields': "billing_sum",                "formula": "sum(billing_sum) AS billing_sum"},
     'issue':   {'from_billing': False, 'fields': "l.issue_pk AS issue_pk",     "formula": "count(issue_pk) as issue_cnt"},
     'traffic': {'from_billing': False, 'fields': "bytes_sent, bytes_received", "formula": "sum(cast(bytes_sent AS BIGINT) + cast(bytes_received AS BIGINT)) AS traffic_amount"},
-)
+}
 
 default_args = {
     'owner': USERNAME,
