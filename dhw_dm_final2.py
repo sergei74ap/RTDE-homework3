@@ -4,8 +4,17 @@ from airflow.operators.dummy_operator import DummyOperator
 from datetime import datetime
 
 USERNAME = 'sperfilyev'
+
+# =============================================================
+# Подготовим метаданные для кодогенерации SQL
 DM_DIMENSIONS = ('report_year', 'legal_type', 'district', 'billing_mode', 'registration_year')
-DDS_SOURCES = ('payment', 'billing', 'issue', 'traffic')
+#DDS_SOURCES = ('payment', 'billing', 'issue', 'traffic')
+DM_AGGREGATION = (
+    'payment': {'from_billing': True,  'fields': "pay_sum",                    "formula": "sum(pay_sum) AS payment_sum"},
+    'billing': {'from_billing': True,  'fields': "billing_sum",                "formula": "sum(billing_sum) AS billing_sum"},
+    'issue':   {'from_billing': False, 'fields': "l.issue_pk AS issue_pk",     "formula": "count(issue_pk) as issue_cnt"},
+    'traffic': {'from_billing': False, 'fields': "bytes_sent, bytes_received", "formula": "sum(cast(bytes_sent AS BIGINT) + cast(bytes_received AS BIGINT)) AS traffic_amount"},
+)
 
 default_args = {
     'owner': USERNAME,
@@ -64,51 +73,18 @@ ORDER BY {{{{ params.dimensionsText }}}}, is_vip
 );""".format(dds_link=dds_link, our_fields=our_fields, our_formula=our_formula, \
              report_date=report_date, join_hbp=join_hbp)
 
-tmp_tbl_collect = []
-
-# --- Платежи
-tmp_tbl_collect.append(PostgresOperator(
-    task_id="tmp_tbl_collect_payment", 
-    dag=dag,
-    sql=build_tmp_sql(
-        dds_link='payment', 
-        our_fields='pay_sum', 
-        our_formula='sum(pay_sum) AS payment_sum',
-        with_billing_period=True,
-    )))
-
-# --- Начисления
-tmp_tbl_collect.append(PostgresOperator(
-    task_id="tmp_tbl_collect_billing", 
-    dag=dag,
-    sql=build_tmp_sql(
-        dds_link='billing', 
-        our_fields='billing_sum', 
-        our_formula='sum(billing_sum) AS billing_sum',
-        with_billing_period=True,
-    )))
-
-# --- Обращения
-tmp_tbl_collect.append(PostgresOperator(
-    task_id="tmp_tbl_collect_issue", 
-    dag=dag,
-    sql=build_tmp_sql(
-        dds_link='issue',
-        our_fields='l.issue_pk AS issue_pk',  
-        our_formula='count(issue_pk) as issue_cnt',
-        with_billing_period=False,
-    )))
-       
-# --- Трафик
-tmp_tbl_collect.append(PostgresOperator(
-    task_id="tmp_tbl_collect_traffic", 
-    dag=dag,
-    sql=build_tmp_sql(
-        dds_link='traffic',
-        our_fields='bytes_sent, bytes_received',  
-        our_formula='sum(cast(bytes_sent AS BIGINT) + cast(bytes_received AS BIGINT)) AS traffic_amount',
-        with_billing_period=False,
-    )))
+tmp_tbl_collect = [
+    PostgresOperator(
+        task_id="tmp_tbl_collect_{0}", 
+        dag=dag,
+        sql=build_tmp_sql(
+            dds_link=dds_source, 
+            our_fields=DM_AGGREGATION[dds_source]['fields'], 
+            our_formula=DM_AGGREGATION[dds_source]['formula'],
+            with_billing_period=DM_AGGREGATION[dds_source]['from_billing'],
+        )
+    ) for dds_source in DM_AGGREGATION.keys()
+]
 
 # --------------------------------------------------------
 # Наполнить таблицы измерений данными из временных таблиц
@@ -169,7 +145,7 @@ UPDATE {{ params.schemaName }}.dm_report_fct SET traffic_amount=0 WHERE traffic_
 
 # ---------------------------------
 # Удалить временные таблицы
-drop_sql = '\n'.join(["DROP TABLE {{{{ params.schemaName }}}}.dm_report_{0}_oneyear;".format(dds_source) for dds_source in DDS_SOURCES])
+drop_sql = '\n'.join(["DROP TABLE {{{{ params.schemaName }}}}.dm_report_{0}_oneyear;".format(dds_source) for dds_source in DM_AGGREGATION.keys()])
 tmp_tbl_drop = PostgresOperator(
     task_id="tmp_tbl_drop",
     dag=dag,
