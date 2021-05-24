@@ -1,5 +1,6 @@
 from airflow import DAG
 from airflow.operators.postgres_operator import PostgresOperator
+from airflow.operators.dummy_operator import DummyOperator
 from datetime import datetime
 
 USERNAME = 'sperfilyev'
