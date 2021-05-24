@@ -57,7 +57,7 @@ SELECT {{ params.dimensionsText }}, is_vip,
 FROM oneyear_data
 GROUP BY {{ params.dimensionsText }}, is_vip
 ORDER BY {{ params.dimensionsText }}, is_vip
-);""")
+);"""))
 
 # --- Начисления
 tmp_tbl_collect.append(PostgresOperator(
@@ -89,7 +89,7 @@ SELECT {{ params.dimensionsText }}, is_vip,
 FROM oneyear_data
 GROUP BY {{ params.dimensionsText }}, is_vip
 ORDER BY {{ params.dimensionsText }}, is_vip
-);""")
+);"""))
 
 # --- Обращения
 tmp_tbl_collect.append(PostgresOperator(
@@ -119,7 +119,7 @@ SELECT {{ params.dimensionsText }}, is_vip,
 FROM oneyear_data
 GROUP BY {{ params.dimensionsText }}, is_vip
 ORDER BY {{ params.dimensionsText }}, is_vip
-);""")
+);"""))
 
 # --- Трафик
 tmp_tbl_collect.append(PostgresOperator(
@@ -149,7 +149,7 @@ SELECT {{ params.dimensionsText }}, is_vip,
 FROM oneyear_data
 GROUP BY {{ params.dimensionsText }}, is_vip
 ORDER BY {{ params.dimensionsText }}, is_vip
-);""")
+);"""))
 
 # --------------------------------------------------------
 # Наполнить таблицы измерений данными из временных таблиц
