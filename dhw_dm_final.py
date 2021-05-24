@@ -4,7 +4,7 @@ from airflow.operators.dummy_operator import DummyOperator
 from datetime import datetime
 
 USERNAME = 'sperfilyev'
-DM_DIMENSIONS = ('billing_year', 'legal_type', 'district', 'billing_mode', 'registration_year')
+DM_DIMENSIONS = ('report_year', 'legal_type', 'district', 'billing_mode', 'registration_year')
 DDS_SOURCES = ('payment', 'billing', 'issue', 'traffc')
 
 default_args = {
