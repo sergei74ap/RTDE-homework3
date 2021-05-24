@@ -29,7 +29,7 @@ dag = DAG(
 def build_tmp_sql(dds_link, our_fields, our_formula, with_billing_period=True):
 
     if with_billing_period:
-        report_date = 'to_date(billing_period_key, 'YYYY-MM')'
+        report_date = "to_date(billing_period_key, 'YYYY-MM')"
         our_fields = our_fields + ', billing_period_key'
         join_hbp = """
 JOIN {{{{ params.schemaName }}}}.dds_t_hub_billing_period hbp ON l.billing_period_pk=hbp.billing_period_pk"""
