@@ -33,8 +33,8 @@ tmp_tbl_collect.append(PostgresOperator(
     task_id="tmp_tbl_collect_payment", 
     dag=dag,
     sql="""
-DROP TABLE IF EXISTS {{ params.schemaName }}.dm_report_payment_tmp;
-CREATE TABLE {{ params.schemaName }}.dm_report_payment_tmp AS (
+DROP TABLE IF EXISTS {{ params.schemaName }}.dm_report_payment_oneyear;
+CREATE TABLE {{ params.schemaName }}.dm_report_payment_oneyear AS (
   WITH raw_data AS (
       SELECT legal_type,
              district,
@@ -65,8 +65,8 @@ tmp_tbl_collect.append(PostgresOperator(
     task_id="tmp_tbl_collect_billing", 
     dag=dag,
     sql="""
-DROP TABLE IF EXISTS {{ params.schemaName }}.dm_report_billing_tmp;
-CREATE TABLE {{ params.schemaName }}.dm_report_billing_tmp AS (
+DROP TABLE IF EXISTS {{ params.schemaName }}.dm_report_billing_oneyear;
+CREATE TABLE {{ params.schemaName }}.dm_report_billing_oneyear AS (
   WITH raw_data AS (
       SELECT legal_type,
              district,
@@ -97,8 +97,8 @@ tmp_tbl_collect.append(PostgresOperator(
     task_id="tmp_tbl_collect_issue", 
     dag=dag,
     sql="""
-DROP TABLE IF EXISTS sperfilyev.dm_report_issue_tmp;
-CREATE TABLE sperfilyev.dm_report_issue_tmp AS (
+DROP TABLE IF EXISTS sperfilyev.dm_report_issue_oneyear;
+CREATE TABLE sperfilyev.dm_report_issue_oneyear AS (
   WITH raw_data AS (
       SELECT legal_type,
              district,
@@ -127,8 +127,8 @@ tmp_tbl_collect.append(PostgresOperator(
     task_id="tmp_tbl_collect_traffic", 
     dag=dag,
     sql="""
-DROP TABLE IF EXISTS sperfilyev.dm_report_traffic_tmp;
-CREATE TABLE sperfilyev.dm_report_traffic_tmp AS (
+DROP TABLE IF EXISTS sperfilyev.dm_report_traffic_oneyear;
+CREATE TABLE sperfilyev.dm_report_traffic_oneyear AS (
   WITH raw_data AS (
       SELECT legal_type,
              district,
