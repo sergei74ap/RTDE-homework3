@@ -153,4 +153,5 @@ tmp_tbl_drop = PostgresOperator(
 
 ## ОПРЕДЕЛИМ СТРУКТУРУ DAG'А
 DummyOperator(task_id="datamart_start", dag=dag) >> tmp_tbl_collect >> \
-DummyOperator(task_id="tmp_tbls_done", dag=dag) >> dimensions_fill >> facts_fill >> tmp_tbl_drop
+DummyOperator(task_id="tmp_tbls_done", dag=dag) >> dimensions_fill >> \
+DummyOperator(task_id="dims_done", dag=dag) >> facts_fill >> tmp_tbl_drop
