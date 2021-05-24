@@ -4,8 +4,16 @@ from airflow.operators.dummy_operator import DummyOperator
 from datetime import datetime
 
 USERNAME = 'sperfilyev'
+
+# =============================================================
+# Подготовим метаданные для кодогенерации SQL
 DM_DIMENSIONS = ('report_year', 'legal_type', 'district', 'billing_mode', 'registration_year')
-DDS_SOURCES = ('payment', 'billing', 'issue', 'traffic')
+DM_AGGREGATION = {
+    'payment': {'from_billing': True,  'fields': "pay_sum",                    "formula": "sum(pay_sum) AS payment_sum"},
+    'billing': {'from_billing': True,  'fields': "billing_sum",                "formula": "sum(billing_sum) AS billing_sum"},
+    'issue':   {'from_billing': False, 'fields': "l.issue_pk AS issue_pk",     "formula": "count(issue_pk) as issue_cnt"},
+    'traffic': {'from_billing': False, 'fields': "bytes_sent, bytes_received", "formula": "sum(cast(bytes_sent AS BIGINT) + cast(bytes_received AS BIGINT)) AS traffic_amount"},
+}
 
 default_args = {
     'owner': USERNAME,
@@ -26,131 +34,56 @@ dag = DAG(
 # ОПИШЕМ ВСЕ ОПЕРАЦИИ ЗАГРУЗКИ ДАННЫХ
 
 # Собрать временные денормализованные таблицы
-tmp_tbl_collect = []
+def build_tmp_sql(dds_link, our_fields, our_formula, with_billing_period=True):
 
-# --- Платежи
-tmp_tbl_collect.append(PostgresOperator(
-    task_id="tmp_tbl_collect_payment", 
-    dag=dag,
-    sql="""
-DROP TABLE IF EXISTS {{ params.schemaName }}.dm_report_payment_oneyear;
-CREATE TABLE {{ params.schemaName }}.dm_report_payment_oneyear AS (
+    if with_billing_period:
+        report_date = "to_date(billing_period_key, 'YYYY-MM')"
+        our_fields = our_fields + ", billing_period_key"
+        join_hbp = "JOIN {{ params.schemaName }}.dds_t_hub_billing_period hbp ON l.billing_period_pk=hbp.billing_period_pk"
+    else:
+        report_date = "l.effective_from"
+        join_hbp = ""
+
+    return """
+DROP TABLE IF EXISTS {{{{ params.schemaName }}}}.dm_report_{dds_link}_oneyear;
+CREATE TABLE {{{{ params.schemaName }}}}.dm_report_{dds_link}_oneyear AS (
   WITH raw_data AS (
       SELECT legal_type,
              district,
              billing_mode,
              EXTRACT(YEAR FROM su.effective_from) as registration_year,
              is_vip,
-             pay_sum,
-             billing_period_key,
-             EXTRACT(YEAR FROM to_date(billing_period_key, 'YYYY-MM')) AS report_year
-      FROM {{ params.schemaName }}.dds_t_lnk_payment l
-      JOIN {{ params.schemaName }}.dds_t_hub_billing_period hbp ON l.billing_period_pk=hbp.billing_period_pk
-      JOIN {{ params.schemaName }}.dds_t_hub_user hu ON l.user_pk=hu.user_pk
-      JOIN {{ params.schemaName }}.dds_t_sat_payment s ON l.payment_pk=s.payment_pk
-      LEFT JOIN {{ params.schemaName }}.dds_t_sat_user_mdm su ON hu.user_pk=su.user_pk),
+             {our_fields},
+             EXTRACT(YEAR FROM {report_date}) AS report_year
+      FROM {{{{ params.schemaName }}}}.dds_t_lnk_{dds_link} l
+      {join_hbp}
+      JOIN {{{{ params.schemaName }}}}.dds_t_hub_user hu ON l.user_pk=hu.user_pk
+      JOIN {{{{ params.schemaName }}}}.dds_t_sat_{dds_link} s ON l.{dds_link}_pk=s.{dds_link}_pk
+      LEFT JOIN {{{{ params.schemaName }}}}.dds_t_sat_user_mdm su ON hu.user_pk=su.user_pk),
   oneyear_data AS (
       SELECT * FROM raw_data
-      WHERE report_year={{ execution_date.year }}
+      WHERE report_year={{{{ execution_date.year }}}}
   )
-SELECT {{ params.dimensionsText }}, is_vip, 
-       sum(pay_sum) as payment_sum
+SELECT {{{{ params.dimensionsText }}}}, is_vip, 
+       {our_formula}
 FROM oneyear_data
-GROUP BY {{ params.dimensionsText }}, is_vip
-ORDER BY {{ params.dimensionsText }}, is_vip
-);"""))
+GROUP BY {{{{ params.dimensionsText }}}}, is_vip
+ORDER BY {{{{ params.dimensionsText }}}}, is_vip
+);""".format(dds_link=dds_link, our_fields=our_fields, our_formula=our_formula, \
+             report_date=report_date, join_hbp=join_hbp)
 
-# --- Начисления
-tmp_tbl_collect.append(PostgresOperator(
-    task_id="tmp_tbl_collect_billing", 
-    dag=dag,
-    sql="""
-DROP TABLE IF EXISTS {{ params.schemaName }}.dm_report_billing_oneyear;
-CREATE TABLE {{ params.schemaName }}.dm_report_billing_oneyear AS (
-  WITH raw_data AS (
-      SELECT legal_type,
-             district,
-             billing_mode,
-             EXTRACT(YEAR FROM su.effective_from) as registration_year,
-             is_vip,
-             billing_sum,
-             billing_period_key,
-             EXTRACT(YEAR FROM to_date(billing_period_key, 'YYYY-MM')) AS report_year
-      FROM {{ params.schemaName }}.dds_t_lnk_billing l
-      JOIN {{ params.schemaName }}.dds_t_hub_billing_period hbp ON l.billing_period_pk=hbp.billing_period_pk
-      JOIN {{ params.schemaName }}.dds_t_hub_user hu ON l.user_pk=hu.user_pk
-      JOIN {{ params.schemaName }}.dds_t_sat_billing s ON l.billing_pk=s.billing_pk
-      LEFT JOIN {{ params.schemaName }}.dds_t_sat_user_mdm su ON hu.user_pk=su.user_pk),
-  oneyear_data AS (
-      SELECT * FROM raw_data
-      WHERE report_year={{ execution_date.year }}
-  )
-SELECT {{ params.dimensionsText }}, is_vip, 
-       sum(billing_sum) as billing_sum
-FROM oneyear_data
-GROUP BY {{ params.dimensionsText }}, is_vip
-ORDER BY {{ params.dimensionsText }}, is_vip
-);"""))
-
-# --- Обращения
-tmp_tbl_collect.append(PostgresOperator(
-    task_id="tmp_tbl_collect_issue", 
-    dag=dag,
-    sql="""
-DROP TABLE IF EXISTS sperfilyev.dm_report_issue_oneyear;
-CREATE TABLE sperfilyev.dm_report_issue_oneyear AS (
-  WITH raw_data AS (
-      SELECT legal_type,
-             district,
-             billing_mode,
-             EXTRACT(YEAR FROM su.effective_from) as registration_year,
-             is_vip,
-             l.issue_pk AS issue_pk,
-             EXTRACT(YEAR FROM l.effective_from) AS report_year
-      FROM sperfilyev.dds_t_lnk_issue l
-      JOIN sperfilyev.dds_t_hub_user hu ON l.user_pk=hu.user_pk
-      JOIN sperfilyev.dds_t_sat_issue s ON l.issue_pk=s.issue_pk
-      LEFT JOIN sperfilyev.dds_t_sat_user_mdm su ON hu.user_pk=su.user_pk),
-  oneyear_data AS (
-      SELECT * FROM raw_data
-      WHERE report_year={{ execution_date.year }}
-  )
-SELECT {{ params.dimensionsText }}, is_vip, 
-       count(issue_pk) as issue_cnt
-FROM oneyear_data
-GROUP BY {{ params.dimensionsText }}, is_vip
-ORDER BY {{ params.dimensionsText }}, is_vip
-);"""))
-
-# --- Трафик
-tmp_tbl_collect.append(PostgresOperator(
-    task_id="tmp_tbl_collect_traffic", 
-    dag=dag,
-    sql="""
-DROP TABLE IF EXISTS sperfilyev.dm_report_traffic_oneyear;
-CREATE TABLE sperfilyev.dm_report_traffic_oneyear AS (
-  WITH raw_data AS (
-      SELECT legal_type,
-             district,
-             billing_mode,
-             EXTRACT(YEAR FROM su.effective_from) AS registration_year,
-             is_vip,
-             bytes_sent, bytes_received,
-             EXTRACT(YEAR FROM l.effective_from) AS report_year
-      FROM sperfilyev.dds_t_lnk_traffic l
-      JOIN sperfilyev.dds_t_hub_user hu ON l.user_pk=hu.user_pk
-      JOIN sperfilyev.dds_t_sat_traffic s ON l.traffic_pk=s.traffic_pk
-      LEFT JOIN sperfilyev.dds_t_sat_user_mdm su ON hu.user_pk=su.user_pk),
-  oneyear_data AS (
-      SELECT * FROM raw_data
-      WHERE report_year={{ execution_date.year }}
-  )
-SELECT {{ params.dimensionsText }}, is_vip,
-       sum(cast(bytes_sent AS BIGINT) + cast(bytes_received AS BIGINT)) AS traffic_amount
-FROM oneyear_data
-GROUP BY {{ params.dimensionsText }}, is_vip
-ORDER BY {{ params.dimensionsText }}, is_vip
-);"""))
+tmp_tbl_collect = [
+    PostgresOperator(
+        task_id="tmp_tbl_collect_{0}".format(dds_source), 
+        dag=dag,
+        sql=build_tmp_sql(
+            dds_link=dds_source, 
+            our_fields=DM_AGGREGATION[dds_source]['fields'], 
+            our_formula=DM_AGGREGATION[dds_source]['formula'],
+            with_billing_period=DM_AGGREGATION[dds_source]['from_billing'],
+        )
+    ) for dds_source in DM_AGGREGATION.keys()
+]
 
 # --------------------------------------------------------
 # Наполнить таблицы измерений данными из временных таблиц
@@ -211,7 +144,7 @@ UPDATE {{ params.schemaName }}.dm_report_fct SET traffic_amount=0 WHERE traffic_
 
 # ---------------------------------
 # Удалить временные таблицы
-drop_sql = '\n'.join(["DROP TABLE {{{{ params.schemaName }}}}.dm_report_{0}_oneyear;".format(dds_source) for dds_source in DDS_SOURCES])
+drop_sql = '\n'.join(["DROP TABLE {{{{ params.schemaName }}}}.dm_report_{0}_oneyear;".format(dds_source) for dds_source in DM_AGGREGATION.keys()])
 tmp_tbl_drop = PostgresOperator(
     task_id="tmp_tbl_drop",
     dag=dag,
