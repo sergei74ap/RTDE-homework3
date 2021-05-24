@@ -62,7 +62,8 @@ SELECT {{{{ params.dimensionsText }}}}, is_vip,
 FROM oneyear_data
 GROUP BY {{{{ params.dimensionsText }}}}, is_vip
 ORDER BY {{{{ params.dimensionsText }}}}, is_vip
-);""".format(dds_link=dds_link, our_fields=our_fields, our_formula=our_formula)
+);""".format(dds_link=dds_link, our_fields=our_fields, our_formula=our_formula, \
+             report_date=report_date, join_hbp=join_hbp)
 
 tmp_tbl_collect = []
 
