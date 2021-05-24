@@ -75,7 +75,7 @@ ORDER BY {{{{ params.dimensionsText }}}}, is_vip
 
 tmp_tbl_collect = [
     PostgresOperator(
-        task_id="tmp_tbl_collect_{0}", 
+        task_id="tmp_tbl_collect_{0}".format(dds_source), 
         dag=dag,
         sql=build_tmp_sql(
             dds_link=dds_source, 
