@@ -5,7 +5,7 @@ from datetime import datetime
 
 USERNAME = 'sperfilyev'
 DM_DIMENSIONS = ('report_year', 'legal_type', 'district', 'billing_mode', 'registration_year')
-DDS_SOURCES = ('payment', 'billing', 'issue', 'traffc')
+DDS_SOURCES = ('payment', 'billing', 'issue', 'traffic')
 
 default_args = {
     'owner': USERNAME,
