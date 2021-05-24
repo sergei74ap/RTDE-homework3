@@ -8,7 +8,6 @@ USERNAME = 'sperfilyev'
 # =============================================================
 # Подготовим метаданные для кодогенерации SQL
 DM_DIMENSIONS = ('report_year', 'legal_type', 'district', 'billing_mode', 'registration_year')
-#DDS_SOURCES = ('payment', 'billing', 'issue', 'traffic')
 DM_AGGREGATION = {
     'payment': {'from_billing': True,  'fields': "pay_sum",                    "formula": "sum(pay_sum) AS payment_sum"},
     'billing': {'from_billing': True,  'fields': "billing_sum",                "formula": "sum(billing_sum) AS billing_sum"},
