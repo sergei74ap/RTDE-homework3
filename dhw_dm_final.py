@@ -123,7 +123,7 @@ tmp_tbls = [];
 for aggr_src in DM_AGGREGATION.keys():
     tmp_tbls.append("LEFT JOIN {{{{ params.schemaName }}}}.dm_report_{0}_oneyear {0} ON".format(aggr_src))
     tmp_tbls.append(
-        "\n\t AND ".join(["{aggr_src}.{dim_name} = dim{dim_indx}.{dim_name}_key".format(dim_indx, dim_name)] + \      
+        "\n\t AND ".join(["{aggr_src}.{dim_name} = dim{dim_indx}.{dim_name}_key".format(dim_indx, dim_name)] + \
         "\n\t AND {0}.is_vip = vip.is_vip".format(aggr_src)
     )
 tmp_tbls = "\n".join(tmp_tbls) 
