@@ -115,10 +115,12 @@ dim_ids = ",\n".join(
     ["dim{0}.id AS {1}_id".format(dim_indx, dim_name) \
     for dim_indx, dim_name in enumerate(DM_DIMENSIONS)]
 )
+
 dim_tbls = "\nCROSS JOIN ".join(
     ["{{{{ params.schemaName }}}}.dm_report_dim_{1} dim{0}".format(dim_indx, dim_name) \
     for dim_indx, dim_name in enumerate(DM_DIMENSIONS)]
 )
+
 aggr_flds = [
     DM_AGGREGATION[aggr_src]['formula'].upper().split(" AS ")[-1].strip() \
     for aggr_src in DM_AGGREGATION.keys()
@@ -140,16 +142,17 @@ replace_nulls = "\n".join([
     for aggr_var in aggr_flds
 ])
 
-dummy_sql = PostgresOperator(
-    task_id="dummy_sql",
+# Наполнить данными таблицу фактов, собрать из всех временных таблиц
+facts_fill = PostgresOperator(
+    task_id="facts_fill",
     dag=dag,
     sql="""
---INSERT INTO {{{{ params.schemaName }}}}.dm_report_fct
-    SELECT 
+INSERT INTO {{{{ params.schemaName }}}}.dm_report_fct
+SELECT 
 {dim_ids},
 vip.is_vip,
 {aggr_flds}
-    FROM {dim_tbls}
+FROM {dim_tbls}
 CROSS JOIN (SELECT DISTINCT is_vip FROM {{{{ params.schemaName }}}}.dds_t_sat_user_mdm) vip
 {tmp_tbls}
 WHERE report_year_key={{{{ execution_date.year }}}};
@@ -159,68 +162,11 @@ WHERE report_year_key={{{{ execution_date.year }}}};
 dim_tbls=dim_tbls, tmp_tbls=tmp_tbls, replace_nulls=replace_nulls)
 )
 
-# Наполнить данными таблицу фактов, собрать из временных таблиц
-facts_fill = PostgresOperator(
-    task_id="facts_fill",
-    dag=dag,
-    sql="""
-INSERT INTO {{ params.schemaName }}.dm_report_fct
-    SELECT y.id AS report_year_id,
-           lt.id AS legal_type_id,
-           d.id AS district_id,
-           bm.id AS billing_mode_id,
-           ry.id AS registration_year_id,
-           vip.is_vip,
-           payment_sum,
-           billing_sum,
-           issue_cnt,
-           traffic_amount
-    FROM {{ params.schemaName }}.dm_report_dim_report_year y
-             CROSS JOIN {{ params.schemaName }}.dm_report_dim_legal_type lt
-             CROSS JOIN {{ params.schemaName }}.dm_report_dim_district d
-             CROSS JOIN {{ params.schemaName }}.dm_report_dim_billing_mode bm
-             CROSS JOIN {{ params.schemaName }}.dm_report_dim_registration_year ry
-             CROSS JOIN (SELECT DISTINCT is_vip FROM {{ params.schemaName }}.dds_t_sat_user_mdm) vip
-             LEFT JOIN {{ params.schemaName }}.dm_report_payment_oneyear pay
-                       ON pay.report_year = y.report_year_key
-                           AND pay.legal_type = lt.legal_type_key
-                           AND pay.district = d.district_key
-                           AND pay.billing_mode = bm.billing_mode_key
-                           AND pay.registration_year = ry.registration_year_key
-                           AND pay.is_vip = vip.is_vip
-             LEFT JOIN {{ params.schemaName }}.dm_report_billing_oneyear bill
-                       ON bill.report_year = y.report_year_key
-                           AND bill.legal_type = lt.legal_type_key
-                           AND bill.district = d.district_key
-                           AND bill.billing_mode = bm.billing_mode_key
-                           AND bill.registration_year = ry.registration_year_key
-                           AND bill.is_vip = vip.is_vip
-             LEFT JOIN {{ params.schemaName }}.dm_report_issue_oneyear issue
-                       ON issue.report_year = y.report_year_key
-                           AND issue.legal_type = lt.legal_type_key
-                           AND issue.district = d.district_key
-                           AND issue.billing_mode = bm.billing_mode_key
-                           AND issue.registration_year = ry.registration_year_key
-                           AND issue.is_vip = vip.is_vip
-             LEFT JOIN {{ params.schemaName }}.dm_report_traffic_oneyear trf
-                       ON trf.report_year = y.report_year_key
-                           AND trf.legal_type = lt.legal_type_key
-                           AND trf.district = d.district_key
-                           AND trf.billing_mode = bm.billing_mode_key
-                           AND trf.registration_year = ry.registration_year_key
-                           AND trf.is_vip = vip.is_vip
-    WHERE y.report_year_key={{ execution_date.year }};
-
-UPDATE {{ params.schemaName }}.dm_report_fct SET payment_sum=0 WHERE payment_sum IS NULL;
-UPDATE {{ params.schemaName }}.dm_report_fct SET billing_sum=0 WHERE billing_sum IS NULL;
-UPDATE {{ params.schemaName }}.dm_report_fct SET issue_cnt=0 WHERE issue_cnt IS NULL;
-UPDATE {{ params.schemaName }}.dm_report_fct SET traffic_amount=0 WHERE traffic_amount IS NULL;
-"""
-)
-
 # ---------------------------------
 # Удалить временные таблицы
-drop_sql = '\n'.join(["DROP TABLE {{{{ params.schemaName }}}}.dm_report_{0}_oneyear;".format(dds_source) for dds_source in DM_AGGREGATION.keys()])
+drop_sql = '\n'.join(["DROP TABLE {{{{ params.schemaName }}}}.dm_report_{0}_oneyear;".format(dds_source) \
+for dds_source in DM_AGGREGATION.keys()])
+
 tmp_tbl_drop = PostgresOperator(
     task_id="tmp_tbl_drop",
     dag=dag,
