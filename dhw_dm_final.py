@@ -11,7 +11,7 @@ DM_DIMENSIONS = ('report_year', 'legal_type', 'district', 'billing_mode', 'regis
 DM_AGGREGATION = {
     'payment': {'from_billing': True,  'fields': "pay_sum",                    "formula": "sum(pay_sum) AS payment_sum"},
     'billing': {'from_billing': True,  'fields': "billing_sum",                "formula": "sum(billing_sum) AS billing_sum"},
-    'issue':   {'from_billing': False, 'fields': "l.issue_pk AS issue_pk",     "formula": "count(issue_pk) as issue_cnt"},
+    'issue':   {'from_billing': False, 'fields': "issue_pk",                   "formula": "count(*) as issue_cnt"},
     'traffic': {'from_billing': False, 'fields': "bytes_sent, bytes_received", "formula": "sum(cast(bytes_sent AS BIGINT) + cast(bytes_received AS BIGINT)) AS traffic_amount"},
 }
 
@@ -27,7 +27,7 @@ dag = DAG(
     description='DWH DM final project by ' + USERNAME,
     schedule_interval="@yearly",
     max_active_runs=1,
-    params={'schemaName': USERNAME, 'dimensionsText': ', '.join(DM_DIMENSIONS)},
+    params={'schemaName': USERNAME, 'dimensionsText': ', '.join(DM_DIMENSIONS) + ', is_vip'},
 )
 
 # ===============================================================================
@@ -43,6 +43,7 @@ def build_tmp_sql(dds_link, our_fields, our_formula, with_billing_period=True):
     else:
         report_date = "l.effective_from"
         join_hbp = ""
+    our_fields = ', '.join(['l.' + fld.strip() for fld in our_fields.split(',')])  
 
     return """
 DROP TABLE IF EXISTS {{{{ params.schemaName }}}}.dm_report_{dds_link}_oneyear;
@@ -64,11 +65,11 @@ CREATE TABLE {{{{ params.schemaName }}}}.dm_report_{dds_link}_oneyear AS (
       SELECT * FROM raw_data
       WHERE report_year={{{{ execution_date.year }}}}
   )
-SELECT {{{{ params.dimensionsText }}}}, is_vip, 
+SELECT {{{{ params.dimensionsText }}}},
        {our_formula}
 FROM oneyear_data
-GROUP BY {{{{ params.dimensionsText }}}}, is_vip
-ORDER BY {{{{ params.dimensionsText }}}}, is_vip
+GROUP BY {{{{ params.dimensionsText }}}}
+ORDER BY {{{{ params.dimensionsText }}}}
 );""".format(dds_link=dds_link, our_fields=our_fields, our_formula=our_formula, \
              report_date=report_date, join_hbp=join_hbp)
 
