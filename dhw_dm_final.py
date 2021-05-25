@@ -107,7 +107,6 @@ facts_fill = PostgresOperator(
     dag=dag,
     sql="""
 INSERT INTO {{ params.schemaName }}.dm_report_fct
-CREATE TABLE {{ params.schemaName }}.dm_report_fct AS (
     SELECT y.id AS report_year_id,
            lt.id AS legal_type_id,
            d.id AS district_id,
@@ -151,8 +150,7 @@ CREATE TABLE {{ params.schemaName }}.dm_report_fct AS (
                            AND trf.district = d.district_key
                            AND trf.billing_mode = bm.billing_mode_key
                            AND trf.registration_year = ry.registration_year_key
-                           AND trf.is_vip = vip.is_vip
-);
+                           AND trf.is_vip = vip.is_vip;
 
 UPDATE {{ params.schemaName }}.dm_report_fct_verbose SET payment_sum=0 WHERE payment_sum IS NULL;
 UPDATE {{ params.schemaName }}.dm_report_fct_verbose SET billing_sum=0 WHERE billing_sum IS NULL;
