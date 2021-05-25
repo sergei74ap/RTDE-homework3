@@ -12,7 +12,7 @@ USERNAME = 'sperfilyev'
 DM_DIMENSIONS = ('report_year', 'legal_type', 'district', 'billing_mode', 'registration_year')
 
 # Какие агрегаты будут помещены в таблицу фактов витрины?
-# Для каждого агрегата необходимо определить: из какого источника фактов в DV (линка) берём данные?
+# Для каждого агрегата определить: из какого источника в DV брать данные? (указываем наименование линка, данные берём из его сателлита)
 # хранятся ли факты в линках в разрезе расчётных периодов? по каким полям считать агрегат? по какой формуле? 
 DM_AGGREGATION = {
     'payment': {'from_billing': True,  'fields': "pay_sum",                    "formula": "sum(pay_sum) AS payment_sum"},
@@ -42,14 +42,14 @@ dag = DAG(
 # Собрать временные денормализованные таблицы
 def build_tmp_sql(dds_link, our_fields, our_formula, with_billing_period=True):
 
+    our_fields = ', '.join(['s.' + fld.strip() for fld in our_fields.split(',')])  
     if with_billing_period:
         report_date = "to_date(billing_period_key, 'YYYY-MM')"
-        our_fields = our_fields + ", billing_period_key"
+        our_fields = our_fields + ", l.billing_period_key"
         join_hbp = "JOIN {{ params.schemaName }}.dds_t_hub_billing_period hbp ON l.billing_period_pk=hbp.billing_period_pk"
     else:
         report_date = "l.effective_from"
         join_hbp = ""
-    our_fields = ', '.join(['l.' + fld.strip() for fld in our_fields.split(',')])  
 
     return """
 DROP TABLE IF EXISTS {{{{ params.schemaName }}}}.dm_report_{dds_link}_oneyear;
@@ -108,6 +108,11 @@ WHERE {0}_key is NULL;""".format(dim_name)
 ]
 
 # -------------------------------------------------------------
+
+dim_ids = ',\n'.join(
+    ["dim{0}.id AS {1}_id".format(dim_indx, dim_name) for dim_indx, dim_name in enumerate(DM_DIMENSIONS)]
+)
+
 # Наполнить данными таблицу фактов, собрать из временных таблиц
 facts_fill = PostgresOperator(
     task_id="facts_fill",
