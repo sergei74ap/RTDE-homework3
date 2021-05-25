@@ -124,17 +124,16 @@ aggr_flds = [
     for aggr_src in DM_AGGREGATION.keys()
 ]
 
-tmp_tbls = [];
-for aggr_src in DM_AGGREGATION.keys():
-    tmp_tbls.append("LEFT JOIN {{{{ params.schemaName }}}}.dm_report_{0}_oneyear {0}\n ON".format(aggr_src))
-    tmp_tbls.append(
+tmp_tbls = "\n".join([
+    " ".join([
+        "LEFT JOIN {{{{ params.schemaName }}}}.dm_report_{0}_oneyear {0}\n ON".format(aggr_src),
         "\n\t AND ".join([
             "{aggr_src}.{dim_name} = dim{dim_indx}.{dim_name}_key".format(
                 dim_indx=dim_indx, dim_name=dim_name, aggr_src=aggr_src,
             ) for dim_indx, dim_name in enumerate(DM_DIMENSIONS)
         ]) + "\n\t AND {0}.is_vip = vip.is_vip".format(aggr_src)
-    )
-tmp_tbls = "\n".join(tmp_tbls)
+    ]) for aggr_src in DM_AGGREGATION.keys()
+])
 
 replace_nulls = "\n".join([
     "UPDATE {{{{ params.schemaName }}}}.dm_report_fct SET {0}=0 WHERE {0} IS NULL;".format(aggr_var) \
