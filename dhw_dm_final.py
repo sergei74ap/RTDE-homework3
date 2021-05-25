@@ -114,7 +114,7 @@ WHERE {0}_key is NULL;""".format(dim_name)
 
 # -------------------------------------------------------------------------
 # Сгенерируем из метаданных SQL-запрос для заливки данных в таблицу фактов
-dim_ids = ",\n".join(
+dim_ids = ", ".join(
     ["dim{0}.id AS {1}_id".format(dim_indx, dim_name) \
     for dim_indx, dim_name in enumerate(DM_DIMENSIONS)]
 )
@@ -158,8 +158,7 @@ INSERT INTO {{{{ params.schemaName }}}}.dm_report_fct (
 {aggr_flds}
 )
 SELECT 
-{dim_ids},
-vip.is_vip,
+{dim_ids}, vip.is_vip,
 {aggr_flds}
 FROM {dim_tbls}
 CROSS JOIN (SELECT DISTINCT is_vip FROM {{{{ params.schemaName }}}}.dds_t_sat_user_mdm) vip
