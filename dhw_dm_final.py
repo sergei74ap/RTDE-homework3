@@ -45,7 +45,7 @@ def build_tmp_sql(dds_link, our_fields, our_formula, with_billing_period=True):
     our_fields = ', '.join(['s.' + fld.strip() for fld in our_fields.split(',')])  
     if with_billing_period:
         report_date = "to_date(billing_period_key, 'YYYY-MM')"
-        our_fields = our_fields + ", l.billing_period_key"
+        our_fields = our_fields + ", billing_period_key"
         join_hbp = "JOIN {{ params.schemaName }}.dds_t_hub_billing_period hbp ON l.billing_period_pk=hbp.billing_period_pk"
     else:
         report_date = "l.effective_from"
@@ -111,6 +111,14 @@ WHERE {0}_key is NULL;""".format(dim_name)
 
 dim_ids = ',\n'.join(
     ["dim{0}.id AS {1}_id".format(dim_indx, dim_name) for dim_indx, dim_name in enumerate(DM_DIMENSIONS)]
+)
+dummy_sql = PostgresOperator(
+    task_id="dummy_sql",
+    dag=dag,
+    sql="""
+--INSERT INTO {{{{ params.schemaName }}}}.dm_report_fct
+--SELECT {dim_ids}
+select 1;""".format(dim_ids=dim_ids)
 )
 
 # Наполнить данными таблицу фактов, собрать из временных таблиц
