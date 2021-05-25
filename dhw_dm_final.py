@@ -109,16 +109,48 @@ WHERE {0}_key is NULL;""".format(dim_name)
 
 # -------------------------------------------------------------
 
-dim_ids = ',\n'.join(
+dim_ids = ",\n".join(
     ["dim{0}.id AS {1}_id".format(dim_indx, dim_name) for dim_indx, dim_name in enumerate(DM_DIMENSIONS)]
 )
+dim_tbls = "CROSS JOIN\n".join(
+    ["{{{{ params.schemaName }}}}.dm_report_dim_{1} {0}".format(dim_indx, dim_name) for dim_indx, dim_name in enumerate(DM_DIMENSIONS)]
+)
+aggr_flds = ",\n".join(
+    [DM_AGGREGATION[aggr][formula].split(" AS ")[-1].strip() for aggr in DM_AGGREGATION.keys()]
+)
+
+tmp_tbls = [];
+for aggr_src in DM_AGGREGATION.keys():
+    tmp_tbls.append("LEFT JOIN {{{{ params.schemaName }}}}.dm_report_{0}_oneyear {0} ON".format(aggr_src))
+    tmp_tbls.append(
+        "\n\t AND ".join(["{aggr_src}.{dim_name} = dim{dim_indx}.{dim_name}_key".format(dim_indx, dim_name)] + \      
+        "\n\t AND {0}.is_vip = vip.is_vip".format(aggr_src)
+    )
+tmp_tbls = "\n".join(tmp_tbls) 
+
+replace_nulls = "\n".join([
+    "UPDATE {{{{ params.schemaName }}}}.dm_report_fct SET {0}=0 WHERE {0} IS NULL;".format(  
+        DM_AGGREGATION[aggr_src][formula].split(" AS ")[-1].strip()
+    ) for aggr_src in DM_AGGREGATION.keys()
+])
+
 dummy_sql = PostgresOperator(
     task_id="dummy_sql",
     dag=dag,
     sql="""
 --INSERT INTO {{{{ params.schemaName }}}}.dm_report_fct
---SELECT {dim_ids}
-select 1;""".format(dim_ids=dim_ids)
+    SELECT 
+{dim_ids},
+vip.is_vip,
+{aggr_flds}
+    FROM
+{dim_tbls}
+CROSS JOIN (SELECT DISTINCT is_vip FROM {{ params.schemaName }}.dds_t_sat_user_mdm) vip
+{tmp_tbls}
+WHERE report_year_key={{{{ execution_date.year }}}};
+
+{replace_nulls}
+""".format(dim_ids=dim_ids, aggr_flds=aggr_flds, dim_tbls=dim_tbls, tmp_tbls=tmp_tbls, replace_nulls=replace_nulls)
 )
 
 # Наполнить данными таблицу фактов, собрать из временных таблиц
@@ -132,7 +164,7 @@ INSERT INTO {{ params.schemaName }}.dm_report_fct
            d.id AS district_id,
            bm.id AS billing_mode_id,
            ry.id AS registration_year_id,
-           pay.is_vip,
+           vip.is_vip,
            payment_sum,
            billing_sum,
            issue_cnt,
@@ -143,28 +175,28 @@ INSERT INTO {{ params.schemaName }}.dm_report_fct
              CROSS JOIN {{ params.schemaName }}.dm_report_dim_billing_mode bm
              CROSS JOIN {{ params.schemaName }}.dm_report_dim_registration_year ry
              CROSS JOIN (SELECT DISTINCT is_vip FROM {{ params.schemaName }}.dds_t_sat_user_mdm) vip
-             LEFT JOIN {{ params.schemaName }}.dm_report_payment_tmp pay
+             LEFT JOIN {{ params.schemaName }}.dm_report_payment_oneyear pay
                        ON pay.report_year = y.report_year_key
                            AND pay.legal_type = lt.legal_type_key
                            AND pay.district = d.district_key
                            AND pay.billing_mode = bm.billing_mode_key
                            AND pay.registration_year = ry.registration_year_key
                            AND pay.is_vip = vip.is_vip
-             LEFT JOIN {{ params.schemaName }}.dm_report_billing_tmp bill
+             LEFT JOIN {{ params.schemaName }}.dm_report_billing_oneyear bill
                        ON bill.report_year = y.report_year_key
                            AND bill.legal_type = lt.legal_type_key
                            AND bill.district = d.district_key
                            AND bill.billing_mode = bm.billing_mode_key
                            AND bill.registration_year = ry.registration_year_key
                            AND bill.is_vip = vip.is_vip
-             LEFT JOIN {{ params.schemaName }}.dm_report_issue_tmp issue
+             LEFT JOIN {{ params.schemaName }}.dm_report_issue_oneyear issue
                        ON issue.report_year = y.report_year_key
                            AND issue.legal_type = lt.legal_type_key
                            AND issue.district = d.district_key
                            AND issue.billing_mode = bm.billing_mode_key
                            AND issue.registration_year = ry.registration_year_key
                            AND issue.is_vip = vip.is_vip
-             LEFT JOIN {{ params.schemaName }}.dm_report_traffic_tmp trf
+             LEFT JOIN {{ params.schemaName }}.dm_report_traffic_oneyear trf
                        ON trf.report_year = y.report_year_key
                            AND trf.legal_type = lt.legal_type_key
                            AND trf.district = d.district_key
