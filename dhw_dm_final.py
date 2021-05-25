@@ -18,7 +18,7 @@ DM_DIMENSIONS = ('report_year', 'legal_type', 'district', 'billing_mode', 'regis
 DM_AGGREGATION = {
     'payment': {'from_billing': True,  'fields': "pay_sum",                    'formula': "sum(pay_sum) AS payment_sum"},
     'billing': {'from_billing': True,  'fields': "billing_sum",                'formula': "sum(billing_sum) AS billing_sum"},
-    'issue':   {'from_billing': False, 'fields': "issue_pk",                   'formula': "count(*) as issue_cnt"},
+    'issue':   {'from_billing': False, 'fields': "issue_pk",                   'formula': "count(*) AS issue_cnt"},
     'traffic': {'from_billing': False, 'fields': "bytes_sent, bytes_received", 'formula': "sum(cast(bytes_sent AS BIGINT) + cast(bytes_received AS BIGINT)) AS traffic_amount"},
 }
 
@@ -115,18 +115,18 @@ dim_ids = ",\n".join(
     ["dim{0}.id AS {1}_id".format(dim_indx, dim_name) \
     for dim_indx, dim_name in enumerate(DM_DIMENSIONS)]
 )
-dim_tbls = "CROSS JOIN\n".join(
-    ["{{{{ params.schemaName }}}}.dm_report_dim_{1} {0}".format(dim_indx, dim_name) \
+dim_tbls = "\nCROSS JOIN ".join(
+    ["{{{{ params.schemaName }}}}.dm_report_dim_{1} dim{0}".format(dim_indx, dim_name) \
     for dim_indx, dim_name in enumerate(DM_DIMENSIONS)]
 )
-aggr_flds = ",\n".join(
-    [DM_AGGREGATION[aggr]['formula'].split(" AS ")[-1].strip() \
-    for aggr in DM_AGGREGATION.keys()]
-)
+aggr_flds = [
+    DM_AGGREGATION[aggr_src]['formula'].upper().split(" AS ")[-1].strip() \
+    for aggr_src in DM_AGGREGATION.keys()
+]
 
 tmp_tbls = [];
 for aggr_src in DM_AGGREGATION.keys():
-    tmp_tbls.append("LEFT JOIN {{{{ params.schemaName }}}}.dm_report_{0}_oneyear {0} ON".format(aggr_src))
+    tmp_tbls.append("LEFT JOIN {{{{ params.schemaName }}}}.dm_report_{0}_oneyear {0}\n ON".format(aggr_src))
     tmp_tbls.append(
         "\n\t AND ".join([
             "{aggr_src}.{dim_name} = dim{dim_indx}.{dim_name}_key".format(
@@ -137,9 +137,8 @@ for aggr_src in DM_AGGREGATION.keys():
 tmp_tbls = "\n".join(tmp_tbls)
 
 replace_nulls = "\n".join([
-    "UPDATE {{{{ params.schemaName }}}}.dm_report_fct SET {0}=0 WHERE {0} IS NULL;".format(  
-        DM_AGGREGATION[aggr_src]['formula'].split(" AS ")[-1].strip()
-    ) for aggr_src in DM_AGGREGATION.keys()
+    "UPDATE {{{{ params.schemaName }}}}.dm_report_fct SET {0}=0 WHERE {0} IS NULL;".format(aggr_var) \
+    for aggr_var in aggr_flds
 ])
 
 dummy_sql = PostgresOperator(
@@ -151,14 +150,14 @@ dummy_sql = PostgresOperator(
 {dim_ids},
 vip.is_vip,
 {aggr_flds}
-    FROM
-{dim_tbls}
-CROSS JOIN (SELECT DISTINCT is_vip FROM {{ params.schemaName }}.dds_t_sat_user_mdm) vip
+    FROM {dim_tbls}
+CROSS JOIN (SELECT DISTINCT is_vip FROM {{{{ params.schemaName }}}}.dds_t_sat_user_mdm) vip
 {tmp_tbls}
 WHERE report_year_key={{{{ execution_date.year }}}};
 
 {replace_nulls}
-""".format(dim_ids=dim_ids, aggr_flds=aggr_flds, dim_tbls=dim_tbls, tmp_tbls=tmp_tbls, replace_nulls=replace_nulls)
+""".format(dim_ids=dim_ids, aggr_flds=",\n".join(aggr_flds), \
+dim_tbls=dim_tbls, tmp_tbls=tmp_tbls, replace_nulls=replace_nulls)
 )
 
 # Наполнить данными таблицу фактов, собрать из временных таблиц
