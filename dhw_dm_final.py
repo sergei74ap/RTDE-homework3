@@ -7,7 +7,13 @@ USERNAME = 'sperfilyev'
 
 # =============================================================
 # Подготовим метаданные для кодогенерации SQL
+
+# Какие измерения будут в витрине? 
 DM_DIMENSIONS = ('report_year', 'legal_type', 'district', 'billing_mode', 'registration_year')
+
+# Какие агрегаты будут помещены в таблицу фактов витрины?
+# Для каждого агрегата необходимо определить: из какого источника фактов в DV (линка) берём данные?
+# хранятся ли факты в линках в разрезе расчётных периодов? по каким полям считать агрегат? по какой формуле? 
 DM_AGGREGATION = {
     'payment': {'from_billing': True,  'fields': "pay_sum",                    "formula": "sum(pay_sum) AS payment_sum"},
     'billing': {'from_billing': True,  'fields': "billing_sum",                "formula": "sum(billing_sum) AS billing_sum"},
@@ -108,36 +114,54 @@ facts_fill = PostgresOperator(
     dag=dag,
     sql="""
 INSERT INTO {{ params.schemaName }}.dm_report_fct
-SELECT y.id, lt.id, d.id, bm.id, ry.id, pay.is_vip,
-       pay.payment_sum, bill.billing_sum, issue_cnt, traffic_amount
-FROM {{ params.schemaName }}.dm_report_payment_oneyear pay
-JOIN {{ params.schemaName }}.dm_report_dim_report_year y ON pay.report_year=y.report_year_key
-JOIN {{ params.schemaName }}.dm_report_dim_legal_type lt ON pay.legal_type=lt.legal_type_key
-JOIN {{ params.schemaName }}.dm_report_dim_district d ON pay.district=d.district_key
-JOIN {{ params.schemaName }}.dm_report_dim_billing_mode bm ON pay.billing_mode=bm.billing_mode_key
-JOIN {{ params.schemaName }}.dm_report_dim_registration_year ry ON pay.registration_year=ry.registration_year_key
-LEFT JOIN {{ params.schemaName }}.dm_report_billing_oneyear bill
-    ON bill.report_year=y.report_year_key
-           AND bill.legal_type=lt.legal_type_key
-           AND bill.district=d.district_key
-           AND bill.billing_mode=bm.billing_mode_key
-           AND bill.registration_year=ry.registration_year_key
-           AND bill.is_vip=pay.is_vip
-LEFT JOIN {{ params.schemaName }}.dm_report_issue_oneyear issue
-    ON issue.report_year=y.report_year_key
-           AND issue.legal_type=lt.legal_type_key
-           AND issue.district=d.district_key
-           AND issue.billing_mode=bm.billing_mode_key
-           AND issue.registration_year=ry.registration_year_key
-           AND issue.is_vip=pay.is_vip
-LEFT JOIN {{ params.schemaName }}.dm_report_traffic_oneyear trf
-    ON trf.report_year=y.report_year_key
-           AND trf.legal_type=lt.legal_type_key
-           AND trf.district=d.district_key
-           AND trf.billing_mode=bm.billing_mode_key
-           AND trf.registration_year=ry.registration_year_key
-           AND trf.is_vip=pay.is_vip;
+    SELECT y.id AS report_year_id,
+           lt.id AS legal_type_id,
+           d.id AS district_id,
+           bm.id AS billing_mode_id,
+           ry.id AS registration_year_id,
+           pay.is_vip,
+           payment_sum,
+           billing_sum,
+           issue_cnt,
+           traffic_amount
+    FROM {{ params.schemaName }}.dm_report_dim_report_year y
+             CROSS JOIN {{ params.schemaName }}.dm_report_dim_legal_type lt
+             CROSS JOIN {{ params.schemaName }}.dm_report_dim_district d
+             CROSS JOIN {{ params.schemaName }}.dm_report_dim_billing_mode bm
+             CROSS JOIN {{ params.schemaName }}.dm_report_dim_registration_year ry
+             CROSS JOIN (SELECT DISTINCT is_vip FROM {{ params.schemaName }}.dds_t_sat_user_mdm) vip
+             LEFT JOIN {{ params.schemaName }}.dm_report_payment_tmp pay
+                       ON pay.report_year = y.report_year_key
+                           AND pay.legal_type = lt.legal_type_key
+                           AND pay.district = d.district_key
+                           AND pay.billing_mode = bm.billing_mode_key
+                           AND pay.registration_year = ry.registration_year_key
+                           AND pay.is_vip = vip.is_vip
+             LEFT JOIN {{ params.schemaName }}.dm_report_billing_tmp bill
+                       ON bill.report_year = y.report_year_key
+                           AND bill.legal_type = lt.legal_type_key
+                           AND bill.district = d.district_key
+                           AND bill.billing_mode = bm.billing_mode_key
+                           AND bill.registration_year = ry.registration_year_key
+                           AND bill.is_vip = vip.is_vip
+             LEFT JOIN {{ params.schemaName }}.dm_report_issue_tmp issue
+                       ON issue.report_year = y.report_year_key
+                           AND issue.legal_type = lt.legal_type_key
+                           AND issue.district = d.district_key
+                           AND issue.billing_mode = bm.billing_mode_key
+                           AND issue.registration_year = ry.registration_year_key
+                           AND issue.is_vip = vip.is_vip
+             LEFT JOIN {{ params.schemaName }}.dm_report_traffic_tmp trf
+                       ON trf.report_year = y.report_year_key
+                           AND trf.legal_type = lt.legal_type_key
+                           AND trf.district = d.district_key
+                           AND trf.billing_mode = bm.billing_mode_key
+                           AND trf.registration_year = ry.registration_year_key
+                           AND trf.is_vip = vip.is_vip
+    WHERE y.report_year_key={{ execution_date.year }};
 
+UPDATE {{ params.schemaName }}.dm_report_fct SET payment_sum=0 WHERE payment_sum IS NULL;
+UPDATE {{ params.schemaName }}.dm_report_fct SET billing_sum=0 WHERE billing_sum IS NULL;
 UPDATE {{ params.schemaName }}.dm_report_fct SET issue_cnt=0 WHERE issue_cnt IS NULL;
 UPDATE {{ params.schemaName }}.dm_report_fct SET traffic_amount=0 WHERE traffic_amount IS NULL;
 """
