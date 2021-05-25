@@ -167,8 +167,9 @@ CROSS JOIN (SELECT DISTINCT is_vip FROM {{{{ params.schemaName }}}}.dds_t_sat_us
 WHERE report_year_key={{{{ execution_date.year }}}};
 
 {replace_nulls}
-""".format(dim_ids=dim_ids, aggr_flds=",\n".join(aggr_flds), \
-dim_tbls=dim_tbls, tmp_tbls=tmp_tbls, replace_nulls=replace_nulls)
+""".format(
+    fct_dim_refs=fct_dim_refs, dim_ids=dim_ids, aggr_flds=",\n".join(aggr_flds),
+    dim_tbls=dim_tbls, tmp_tbls=tmp_tbls, replace_nulls=replace_nulls)
 )
 
 # ---------------------------------
