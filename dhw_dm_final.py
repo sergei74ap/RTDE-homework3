@@ -77,7 +77,10 @@ SELECT {{{{ params.dimensionsText }}}},
 FROM oneyear_data
 GROUP BY {{{{ params.dimensionsText }}}}
 ORDER BY {{{{ params.dimensionsText }}}}
-);""".format(dds_link=dds_link, our_fields=our_fields, our_formula=our_formula, \
+);
+
+GRANT ALL PRIVILEGES ON {{ params.schemaName }}.dm_report_{dds_link}_oneyear TO {{ params.schemaName }};
+""".format(dds_link=dds_link, our_fields=our_fields, our_formula=our_formula, \
              report_date=report_date, join_hbp=join_hbp)
 
 # Собрать временные денормализованные таблицы по всем источникам
