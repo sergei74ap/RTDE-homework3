@@ -119,7 +119,7 @@ dim_ids = ",\n".join(
     for dim_indx, dim_name in enumerate(DM_DIMENSIONS)]
 )
 fct_dim_refs = ", ".join(
-    ["{0}_id".format(dim_name) for dim_name in enumerate(DM_DIMENSIONS)]
+    ["{0}_id".format(dim_name) for dim_name in DM_DIMENSIONS]
 )
 
 dim_tbls = "\nCROSS JOIN ".join(
@@ -154,8 +154,8 @@ facts_fill = PostgresOperator(
     dag=dag,
     sql="""
 INSERT INTO {{{{ params.schemaName }}}}.dm_report_fct (
-    {fct_dim_refs}, is_vip,
-    {aggr_flds}
+{fct_dim_refs}, is_vip,
+{aggr_flds}
 )
 SELECT 
 {dim_ids},
