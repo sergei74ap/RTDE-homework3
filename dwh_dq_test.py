@@ -16,7 +16,7 @@ default_args = {
 }
 
 dag = DAG(
-    dag_id=USERNAME + '_dwh_etl',
+    dag_id=USERNAME + '_dwh_dq',
     default_args=default_args,
     default_view='graph',
     description='DWH DQ tasks by ' + USERNAME,
