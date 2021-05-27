@@ -5,7 +5,8 @@ from airflow import DAG
 from airflow.operators.postgres_operator import PostgresOperator
 from airflow.operators.dummy_operator import DummyOperator
 
-from airflow.operators.ssh_execute_operator import SSHExecuteOperator
+#from airflow.operators.ssh_execute_operator import SSHExecuteOperator
+from airflow.contrib.operators.ssh_operator import SSHOperator
 from airflow.contrib.hooks import SSHHook
 
 USERNAME = 'sperfilyev'
@@ -27,7 +28,7 @@ dag = DAG(
 
 sshHook = SSHHook(conn_id='https://pythonanywhere.com')
 
-dq_check = SSHExecuteOperator(
+dq_check = SSHOperator(
         task_id='dq_check',
         bash_command='ls -al',
         ssh_hook=sshHook,
